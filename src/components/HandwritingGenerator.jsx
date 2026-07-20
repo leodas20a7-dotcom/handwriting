@@ -135,8 +135,24 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
 
     useEffect(() => {
         if (!font || !text) return;
-        const fontSize = 120;
-        const p = font.getPath(text, 0, 0, fontSize);
+        const fontSize = 72;
+        const maxWidth = 1500; // Force wrapping to prevent Canvas width limits
+        
+        let p = new opentype.Path();
+        const words = text.split(' ');
+        let currentX = 0;
+        let currentY = 0;
+        
+        for (const word of words) {
+            const wordWidth = font.getAdvanceWidth(word + ' ', fontSize);
+            if (currentX + wordWidth > maxWidth && currentX > 0) {
+                currentX = 0;
+                currentY += fontSize * 1.5;
+            }
+            const wordPath = font.getPath(word + ' ', currentX, currentY, fontSize);
+            p.extend(wordPath);
+            currentX += wordWidth;
+        }
         
         let rawPathData = p.toPathData(2);
         let sanitizedPathData = rawPathData.replace(/[a-zA-Z][^a-zA-Z]*NaN[^a-zA-Z]*/g, '');
@@ -153,7 +169,7 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
         }
         if (minX === Infinity) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
 
-        const padding = 150;
+        const padding = 100;
         const viewBoxStr = `${minX - padding} ${minY - padding} ${maxX - minX + padding * 2} ${maxY - minY + padding * 2}`;
 
         setSvgDimensions({
@@ -166,8 +182,24 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
     const handleDownloadLottie = () => {
         if (!font || !text) return;
         
-        const fontSize = 120;
-        const p = font.getPath(text, 0, 0, fontSize);
+        const fontSize = 72;
+        const maxWidth = 1500;
+        
+        let p = new opentype.Path();
+        const words = text.split(' ');
+        let currentX = 0;
+        let currentY = 0;
+        
+        for (const word of words) {
+            const wordWidth = font.getAdvanceWidth(word + ' ', fontSize);
+            if (currentX + wordWidth > maxWidth && currentX > 0) {
+                currentX = 0;
+                currentY += fontSize * 1.5;
+            }
+            const wordPath = font.getPath(word + ' ', currentX, currentY, fontSize);
+            p.extend(wordPath);
+            currentX += wordWidth;
+        }
         
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         for (const cmd of p.commands) {
@@ -180,7 +212,7 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
         }
         if (minX === Infinity) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
 
-        const padding = 150;
+        const padding = 100;
         const width = maxX - minX + padding * 2;
         const height = maxY - minY + padding * 2;
         const offsetX = -minX + padding;
@@ -460,8 +492,8 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                 ctx.translate(-minX, -minY);
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                // Reduced lineWidth to 40 to create a crisper, tighter mask around the true line shape
-                ctx.lineWidth = 40; 
+                // Increased lineWidth to 60 to ensure all thick TTF cursive letters are fully covered by the tracing mask
+                ctx.lineWidth = 60; 
                 ctx.strokeStyle = '#000'; // Color doesn't matter for mask shape
                 ctx.stroke(maskPath);
                 ctx.restore();
