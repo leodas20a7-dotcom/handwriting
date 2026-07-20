@@ -38,6 +38,26 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
     const [speed, setSpeed] = useState(1);
     const [retryCount, setRetryCount] = useState(0);
 
+    const loadingPhrases = [
+        "Sharpening virtual pencils...",
+        "Mixing vibrant digital ink...",
+        "Calculating elegant cursive curves...",
+        "Drawing every single frame...",
+        "Applying final artistic touches..."
+    ];
+    const [loadingPhraseIndex, setLoadingPhraseIndex] = useState(0);
+
+    useEffect(() => {
+        let interval;
+        if (isGenerating) {
+            setLoadingPhraseIndex(0);
+            interval = setInterval(() => {
+                setLoadingPhraseIndex(prev => (prev + 1) % loadingPhrases.length);
+            }, 2000); // Change phrase every 2 seconds
+        }
+        return () => clearInterval(interval);
+    }, [isGenerating]);
+
     const getContrastColor = (hex) => {
         if (!hex) return '#ffffff';
         let cleanHex = hex.replace('#', '');
@@ -284,7 +304,9 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                     <div className="absolute inset-0 flex items-center justify-center text-4xl animate-bounce">✏️</div>
                 </div>
                 <h3 className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 mb-3 tracking-wide animate-pulse">Crafting Your Video...</h3>
-                <p className="text-gray-600 dark:text-gray-300 font-light text-lg sm:text-xl">Drawing every single frame with precision</p>
+                <p className="text-gray-600 dark:text-gray-300 font-light text-lg sm:text-xl h-8 overflow-hidden">
+                    <span className="block animate-[fade-in-up_0.5s_ease-out]">{loadingPhrases[loadingPhraseIndex]}</span>
+                </p>
             </div>
 
             {/* Theme Toggle Button */}
