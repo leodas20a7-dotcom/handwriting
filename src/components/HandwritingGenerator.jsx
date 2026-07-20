@@ -486,7 +486,14 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                 }
                 
                 // Add a hold time at the end to ensure final frames are captured by the MediaRecorder
-                const holdDuration = 1000;
+                const holdDuration = 2000;
+                
+                if (elapsed >= duration) {
+                    // Force a tiny invisible pixel change to ensure captureStream emits frames during the hold
+                    ctx.globalCompositeOperation = 'source-over';
+                    ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.01})`;
+                    ctx.fillRect(0, 0, 1, 1);
+                }
                 
                 if (elapsed < duration + holdDuration) {
                     requestAnimationFrame(drawFrame);
