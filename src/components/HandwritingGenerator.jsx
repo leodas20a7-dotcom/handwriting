@@ -143,13 +143,23 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
         let sanitizedPathData = rawPathData.replace(/[a-zA-Z][^a-zA-Z]*NaN[^a-zA-Z]*/g, '');
         setPathData(sanitizedPathData);
 
-        const bbox = p.getBoundingBox();
-        const padding = 100;
-        const viewBoxStr = `${bbox.x1 - padding} ${bbox.y1 - padding} ${bbox.x2 - bbox.x1 + padding * 2} ${bbox.y2 - bbox.y1 + padding * 2}`;
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const cmd of p.commands) {
+            if (cmd.x !== undefined) { minX = Math.min(minX, cmd.x); maxX = Math.max(maxX, cmd.x); }
+            if (cmd.y !== undefined) { minY = Math.min(minY, cmd.y); maxY = Math.max(maxY, cmd.y); }
+            if (cmd.x1 !== undefined) { minX = Math.min(minX, cmd.x1); maxX = Math.max(maxX, cmd.x1); }
+            if (cmd.y1 !== undefined) { minY = Math.min(minY, cmd.y1); maxY = Math.max(maxY, cmd.y1); }
+            if (cmd.x2 !== undefined) { minX = Math.min(minX, cmd.x2); maxX = Math.max(maxX, cmd.x2); }
+            if (cmd.y2 !== undefined) { minY = Math.min(minY, cmd.y2); maxY = Math.max(maxY, cmd.y2); }
+        }
+        if (minX === Infinity) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
+
+        const padding = 150;
+        const viewBoxStr = `${minX - padding} ${minY - padding} ${maxX - minX + padding * 2} ${maxY - minY + padding * 2}`;
 
         setSvgDimensions({
-            width: bbox.x2 - bbox.x1 + padding * 2,
-            height: bbox.y2 - bbox.y1 + padding * 2,
+            width: maxX - minX + padding * 2,
+            height: maxY - minY + padding * 2,
             viewBox: viewBoxStr
         });
     }, [text, font]);
@@ -159,12 +169,23 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
         
         const fontSize = 120;
         const p = font.getPath(text, 0, 0, fontSize);
-        const bbox = p.getBoundingBox();
-        const padding = 100;
-        const width = bbox.x2 - bbox.x1 + padding * 2;
-        const height = bbox.y2 - bbox.y1 + padding * 2;
-        const offsetX = -bbox.x1 + padding;
-        const offsetY = -bbox.y1 + padding;
+        
+        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+        for (const cmd of p.commands) {
+            if (cmd.x !== undefined) { minX = Math.min(minX, cmd.x); maxX = Math.max(maxX, cmd.x); }
+            if (cmd.y !== undefined) { minY = Math.min(minY, cmd.y); maxY = Math.max(maxY, cmd.y); }
+            if (cmd.x1 !== undefined) { minX = Math.min(minX, cmd.x1); maxX = Math.max(maxX, cmd.x1); }
+            if (cmd.y1 !== undefined) { minY = Math.min(minY, cmd.y1); maxY = Math.max(maxY, cmd.y1); }
+            if (cmd.x2 !== undefined) { minX = Math.min(minX, cmd.x2); maxX = Math.max(maxX, cmd.x2); }
+            if (cmd.y2 !== undefined) { minY = Math.min(minY, cmd.y2); maxY = Math.max(maxY, cmd.y2); }
+        }
+        if (minX === Infinity) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
+
+        const padding = 150;
+        const width = maxX - minX + padding * 2;
+        const height = maxY - minY + padding * 2;
+        const offsetX = -minX + padding;
+        const offsetY = -minY + padding;
 
         const lottieShapes = [];
         let currentShape = null;
