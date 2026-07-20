@@ -169,69 +169,91 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
 
         recorder.start();
 
-        let start = null;
-        const duration = Math.max(2500, text.length * 200);
-        const p2d = new Path2D(pathData);
+        // Pre-calculate path points for performance to avoid calling getPointAtLength thousands of times per frame
+        const pathPoints = [];
+        const step = 5;
+        for (let i = 0; i <= totalLength; i += step) {
+            pathPoints.push(pathRef.current.getPointAtLength(i));
+        }
+        pathPoints.push(pathRef.current.getPointAtLength(totalLength));
 
-        const viewBoxParts = svgDimensions.viewBox.split(' ').map(Number);
-        const minX = viewBoxParts[0];
-        const minY = viewBoxParts[1];
+        const svgString = `
+            <svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="${svgDimensions.viewBox}">
+                <path d="${pathData}" fill="${textColor}" stroke="${textColor}" stroke-width="1" />
+            </svg>
+        `;
         
-        const drawFrame = (timestamp) => {
-            if (!start) start = timestamp;
-            const rawProgress = (timestamp - start) / duration;
-            // Go up to 1.2 to give 20% extra time for fading in the solid fill
-            const progress = Math.min(rawProgress, 1.2);
-            // Path tracing maxes out at 1.0
-            const traceProgress = Math.min(progress, 1.0);
+        const img = new Image();
+        const blob = new Blob([svgString], { type: 'image/svg+xml' });
+        const url = URL.createObjectURL(blob);
+        
+        img.onload = () => {
+            URL.revokeObjectURL(url);
             
-            ctx.clearRect(0, 0, canvas.width, canvas.height);
-            ctx.fillStyle = bgColor;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            let start = null;
+            const duration = Math.max(2500, text.length * 200);
+            const viewBoxParts = svgDimensions.viewBox.split(' ').map(Number);
+            const minX = viewBoxParts[0];
+            const minY = viewBoxParts[1];
             
-            ctx.save();
-            // Translate the canvas coordinate system to match the SVG viewBox origin
-            ctx.translate(-minX, -minY);
-            
-            const currentLength = totalLength * traceProgress;
-            ctx.setLineDash([totalLength]);
-            ctx.lineDashOffset = totalLength - currentLength;
-            
-            // Draw the traced outline
-            ctx.strokeStyle = textColor;
-            ctx.lineWidth = 1.5;
-            ctx.lineCap = 'round';
-            ctx.lineJoin = 'round';
-            ctx.stroke(p2d);
-            
-            // Fade in the solid fill color at the end (from 1.0 to 1.2)
-            if (progress > 1.0) {
-                const fillAlpha = (progress - 1.0) / 0.2; // scales from 0 to 1
-                ctx.globalAlpha = fillAlpha;
-                ctx.fillStyle = textColor;
-                ctx.fill(p2d);
-                ctx.globalAlpha = 1.0;
-            }
-            
-            // Draw Pencil at the exact mathematical coordinate of the line tip
-            if (showPencil && traceProgress < 1.0) {
-                const point = pathRef.current.getPointAtLength(currentLength);
+            const drawFrame = (timestamp) => {
+                if (!start) start = timestamp;
+                const rawProgress = (timestamp - start) / duration;
+                const progress = Math.min(rawProgress, 1.0);
                 
-                ctx.font = '64px Arial';
-                // Adjust text rendering so the bottom-left tip of the emoji hits the coordinate
-                ctx.fillText('✏️', point.x - 10, point.y + 10);
-            }
+                // 1. Clear canvas (must be transparent for source-in mask to work)
+                ctx.clearRect(0, 0, canvas.width, canvas.height);
+                
+                // 2. Draw the growing "worm" mask tracing the path
+                const currentLength = totalLength * progress;
+                const maskPath = new Path2D();
+                const maxI = Math.floor(currentLength / step);
+                for (let i = 0; i <= maxI; i++) {
+                    const pt = pathPoints[i];
+                    if (i === 0) maskPath.moveTo(pt.x, pt.y);
+                    else maskPath.lineTo(pt.x, pt.y);
+                }
+                const currentPt = pathRef.current.getPointAtLength(currentLength);
+                maskPath.lineTo(currentPt.x, currentPt.y);
+                
+                ctx.save();
+                ctx.translate(-minX, -minY);
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.lineWidth = 80; // Thick enough to cover cursive strokes entirely
+                ctx.strokeStyle = '#000'; // Color doesn't matter for mask shape
+                ctx.stroke(maskPath);
+                ctx.restore();
+                
+                // 3. Composite the solid text into the mask
+                ctx.globalCompositeOperation = 'source-in';
+                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                
+                // 4. Draw Background behind everything
+                ctx.globalCompositeOperation = 'destination-over';
+                ctx.fillStyle = bgColor;
+                ctx.fillRect(0, 0, canvas.width, canvas.height);
+                
+                // 5. Draw Pencil on top
+                ctx.globalCompositeOperation = 'source-over';
+                if (showPencil && progress < 1.0) {
+                    ctx.save();
+                    ctx.translate(-minX, -minY);
+                    ctx.font = '64px Arial';
+                    ctx.fillText('✏️', currentPt.x - 10, currentPt.y + 10);
+                    ctx.restore();
+                }
+                
+                if (progress < 1.0) {
+                    requestAnimationFrame(drawFrame);
+                } else {
+                    recorder.stop();
+                }
+            };
             
-            ctx.restore();
-            
-            if (progress < 1.2) {
-                requestAnimationFrame(drawFrame);
-            } else {
-                recorder.stop();
-            }
+            requestAnimationFrame(drawFrame);
         };
-        
-        requestAnimationFrame(drawFrame);
+        img.src = url;
     };
 
     return (
