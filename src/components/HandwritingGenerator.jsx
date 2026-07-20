@@ -1,6 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
 import opentype from 'opentype.js';
-import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import pacificoUrl from '../assets/Pacifico-Regular.ttf';
 import dancingScriptUrl from '@fontsource/dancing-script/files/dancing-script-latin-400-normal.woff?url';
 import caveatUrl from '@fontsource/caveat/files/caveat-latin-400-normal.woff?url';
@@ -531,13 +530,6 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
 
                 <div className="relative z-10 flex-grow flex flex-col justify-center py-4 sm:py-0">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8 sm:mb-12">
-                        <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 drop-shadow-lg relative">
-                            <DotLottieReact 
-                                src="https://lottie.host/1046ae5b-2e59-47ce-bb6a-d5f7aaa2dddd/4m7zJ5OgRA.json" 
-                                loop 
-                                autoplay 
-                            />
-                        </div>
                         <div>
                             <h2 className="text-3xl sm:text-5xl font-extrabold mb-2 text-gray-900 dark:text-white tracking-tight drop-shadow-sm transition-colors duration-500">Handwriting Generator</h2>
                             <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 font-light transition-colors duration-500">Type text to generate a beautifully animated handwriting video.</p>
