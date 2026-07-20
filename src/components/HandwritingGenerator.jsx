@@ -133,10 +133,19 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
         });
     }, [text, font]);
 
-    const generateVideo = async () => {
-        if (!pathRef.current) return;
+    const generateVideo = () => {
+        if (!pathRef.current || isGenerating) return;
         setIsGenerating(true);
         setVideoUrl(null);
+        
+        // Defer heavy execution by 50ms to allow React to paint the "Recording Canvas..." spinner immediately
+        setTimeout(() => {
+            executeVideoGeneration();
+        }, 50);
+    };
+
+    const executeVideoGeneration = async () => {
+        if (!pathRef.current) return;
 
         const totalLength = pathRef.current.getTotalLength();
         const canvas = canvasRef.current;
