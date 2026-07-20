@@ -327,53 +327,81 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
             ctx.fillStyle = bgColor;
             ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            // 2. Stroke the path sequentially
-            const currentLength = totalLength * progress;
-            const strokePath = new Path2D();
-            const maxI = Math.floor(currentLength / step);
+            // 2. Parse SVG path into segments for precise sequential tracing
+            const regex = /([ML])\s*([\d.-]+)\s*,\s*([\d.-]+)/g;
+            let match;
+            const segments = [];
+            let prevPt = null;
+            let totalPathLength = 0;
             
-            // Prevent out-of-bounds
-            const safeMaxI = Math.min(maxI, pathPoints.length - 1);
-            
-            for (let i = 0; i <= safeMaxI; i++) {
-                const pt = pathPoints[i];
-                if (!pt) continue;
-                // Since our custom parser creates disconnected shapes using M and L,
-                // we should strictly follow the SVG commands instead of blindly linking points.
-                // However, `getPointAtLength` linearly interpolates across M commands (creating jumps).
-                // Actually, Hershey paths have many jumps. 
-                // Wait! If getPointAtLength traverses M jumps, it draws straight lines between letters!
+            while ((match = regex.exec(pathData)) !== null) {
+                const cmd = match[1];
+                const x = parseFloat(match[2]) - minX; // apply viewBox offset
+                const y = parseFloat(match[3]) - minY;
+                
+                if (cmd === 'M') {
+                    prevPt = {x, y};
+                } else if (cmd === 'L') {
+                    const len = Math.hypot(x - prevPt.x, y - prevPt.y);
+                    segments.push({
+                        x1: prevPt.x, y1: prevPt.y,
+                        x2: x, y2: y,
+                        length: len
+                    });
+                    totalPathLength += len;
+                    prevPt = {x, y};
+                }
             }
             
-            // Better approach for Hershey paths with jumps:
-            // Parse the SVG `d` directly into sub-paths, and only draw up to `currentLength`.
-            // But we already have `pathRef.current` and `pathPoints`. Does `getPointAtLength` include M jumps?
-            // Yes, it does. This means we shouldn't use `pathPoints` naively for drawing if we want to avoid jump lines.
-            // Let's use `pathRef.current` combined with SVG `<path>` stroke-dasharray animation in Canvas? No, Canvas doesn't support that directly easily.
-            // Wait, we CAN use `ctx.setLineDash([currentLength, totalLength])` on the FULL path!
-            
-            const fullPath = new Path2D(pathData);
+            const currentLength = totalPathLength * progress;
             
             ctx.save();
-            ctx.translate(-minX, -minY);
             ctx.lineCap = 'round';
             ctx.lineJoin = 'round';
             ctx.lineWidth = 4; // Pen thickness
             ctx.strokeStyle = textColor;
+            ctx.beginPath();
             
-            // Use setLineDash to draw progressively without manually calculating jumps!
-            ctx.setLineDash([currentLength, totalLength]);
-            ctx.stroke(fullPath);
+            let lengthDrawn = 0;
+            let currentPt = null;
+            let lastDrawnPt = null;
+            
+            for (const seg of segments) {
+                if (lengthDrawn + seg.length <= currentLength) {
+                    // Draw full segment
+                    if (!currentPt || currentPt.x !== seg.x1 || currentPt.y !== seg.y1) {
+                        ctx.moveTo(seg.x1, seg.y1);
+                    }
+                    ctx.lineTo(seg.x2, seg.y2);
+                    lengthDrawn += seg.length;
+                    currentPt = {x: seg.x2, y: seg.y2};
+                    lastDrawnPt = currentPt;
+                } else {
+                    // Draw partial segment
+                    const remaining = currentLength - lengthDrawn;
+                    if (remaining > 0) {
+                        if (!currentPt || currentPt.x !== seg.x1 || currentPt.y !== seg.y1) {
+                            ctx.moveTo(seg.x1, seg.y1);
+                        }
+                        const ratio = remaining / seg.length;
+                        const px = seg.x1 + (seg.x2 - seg.x1) * ratio;
+                        const py = seg.y1 + (seg.y2 - seg.y1) * ratio;
+                        ctx.lineTo(px, py);
+                        lastDrawnPt = {x: px, y: py};
+                    }
+                    break;
+                }
+            }
+            
+            ctx.stroke();
             ctx.restore();
             
             // 3. Draw Pencil on top
-            if (showPencil && progress < 1.0) {
+            if (showPencil && progress < 1.0 && lastDrawnPt) {
                 try {
-                    const currentPt = pathRef.current.getPointAtLength(currentLength);
                     ctx.save();
-                    ctx.translate(-minX, -minY);
                     ctx.font = '32px Arial';
-                    ctx.fillText('✏️', currentPt.x - 5, currentPt.y + 5);
+                    ctx.fillText('✏️', lastDrawnPt.x - 5, lastDrawnPt.y + 5);
                     ctx.restore();
                 } catch(e) {}
             }
