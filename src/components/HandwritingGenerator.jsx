@@ -34,6 +34,7 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
     const [fontLoadingProgress, setFontLoadingProgress] = useState(null);
     const [bgColor, setBgColor] = useState(PRESET_COLORS[0].value); 
     const [showPencil, setShowPencil] = useState(false);
+    const [speed, setSpeed] = useState(1);
     const [retryCount, setRetryCount] = useState(0);
 
     const getContrastColor = (hex) => {
@@ -191,14 +192,16 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
             URL.revokeObjectURL(url);
             
             let start = null;
-            const duration = Math.max(2500, text.length * 200);
+            const baseDuration = Math.max(2500, text.length * 200);
+            const duration = baseDuration / speed;
             const viewBoxParts = svgDimensions.viewBox.split(' ').map(Number);
             const minX = viewBoxParts[0];
             const minY = viewBoxParts[1];
             
             const drawFrame = (timestamp) => {
                 if (!start) start = timestamp;
-                const rawProgress = (timestamp - start) / duration;
+                const elapsed = timestamp - start;
+                const rawProgress = elapsed / duration;
                 const progress = Math.min(rawProgress, 1.0);
                 
                 // 1. Clear canvas (must be transparent for source-in mask to work)
@@ -244,7 +247,10 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                     ctx.restore();
                 }
                 
-                if (progress < 1.0) {
+                // Add a hold time at the end to ensure final frames are captured by the MediaRecorder
+                const holdDuration = 1000;
+                
+                if (elapsed < duration + holdDuration) {
                     requestAnimationFrame(drawFrame);
                 } else {
                     recorder.stop();
@@ -301,6 +307,27 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                                         {AVAILABLE_FONTS.map(f => (
                                             <option key={f.name} value={f.url} className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">{f.name}</option>
                                         ))}
+                                    </select>
+                                    <div className="absolute inset-y-0 right-0 flex items-center px-5 pointer-events-none text-gray-400">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Animation Speed Selection */}
+                            <div className="flex flex-col gap-3 mb-8 group">
+                                <label className="text-xs tracking-wider uppercase font-semibold text-gray-500 dark:text-gray-400 transition-colors group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400">Animation Speed</label>
+                                <div className="relative">
+                                    <select 
+                                        value={speed} 
+                                        onChange={e => setSpeed(Number(e.target.value))}
+                                        className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-black/20 focus:bg-white dark:focus:bg-black/40 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all outline-none appearance-none text-gray-900 dark:text-white font-medium text-lg shadow-inner cursor-pointer"
+                                    >
+                                        <option value="0.5" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">0.5x (Slow)</option>
+                                        <option value="1" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">1x (Normal)</option>
+                                        <option value="1.5" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">1.5x (Fast)</option>
+                                        <option value="2" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">2x (Very Fast)</option>
+                                        <option value="3" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">3x (Ultra Fast)</option>
                                     </select>
                                     <div className="absolute inset-y-0 right-0 flex items-center px-5 pointer-events-none text-gray-400">
                                         <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
