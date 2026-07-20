@@ -154,6 +154,193 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
         });
     }, [text, font]);
 
+    const handleDownloadLottie = () => {
+        if (!font || !text) return;
+        
+        const fontSize = 120;
+        const p = font.getPath(text, 0, 0, fontSize);
+        const bbox = p.getBoundingBox();
+        const padding = 100;
+        const width = bbox.x2 - bbox.x1 + padding * 2;
+        const height = bbox.y2 - bbox.y1 + padding * 2;
+        const offsetX = -bbox.x1 + padding;
+        const offsetY = -bbox.y1 + padding;
+
+        const lottieShapes = [];
+        let currentShape = null;
+        let prevX = 0, prevY = 0;
+
+        for (const cmd of p.commands) {
+            const x = cmd.x !== undefined ? cmd.x + offsetX : 0;
+            const y = cmd.y !== undefined ? cmd.y + offsetY : 0;
+            const x1 = cmd.x1 !== undefined ? cmd.x1 + offsetX : 0;
+            const y1 = cmd.y1 !== undefined ? cmd.y1 + offsetY : 0;
+            const x2 = cmd.x2 !== undefined ? cmd.x2 + offsetX : 0;
+            const y2 = cmd.y2 !== undefined ? cmd.y2 + offsetY : 0;
+
+            if (cmd.type === 'M') {
+                if (currentShape && currentShape.v.length > 0) lottieShapes.push(currentShape);
+                currentShape = { c: false, i: [], o: [], v: [] };
+                currentShape.v.push([x, y]);
+                currentShape.i.push([0, 0]);
+                currentShape.o.push([0, 0]);
+                prevX = x;
+                prevY = y;
+            } else if (cmd.type === 'L') {
+                if (!currentShape) continue;
+                currentShape.v.push([x, y]);
+                currentShape.i.push([0, 0]);
+                currentShape.o.push([0, 0]);
+                prevX = x;
+                prevY = y;
+            } else if (cmd.type === 'Q') {
+                if (!currentShape) continue;
+                const cx1 = prevX + 2.0/3.0 * (x1 - prevX);
+                const cy1 = prevY + 2.0/3.0 * (y1 - prevY);
+                const cx2 = x + 2.0/3.0 * (x1 - x);
+                const cy2 = y + 2.0/3.0 * (y1 - y);
+                
+                const lastIdx = currentShape.v.length - 1;
+                currentShape.o[lastIdx] = [cx1 - prevX, cy1 - prevY];
+                currentShape.v.push([x, y]);
+                currentShape.i.push([cx2 - x, cy2 - y]);
+                currentShape.o.push([0, 0]);
+                prevX = x;
+                prevY = y;
+            } else if (cmd.type === 'C') {
+                if (!currentShape) continue;
+                const lastIdx = currentShape.v.length - 1;
+                currentShape.o[lastIdx] = [x1 - prevX, y1 - prevY];
+                currentShape.v.push([x, y]);
+                currentShape.i.push([x2 - x, y2 - y]);
+                currentShape.o.push([0, 0]);
+                prevX = x;
+                prevY = y;
+            } else if (cmd.type === 'Z') {
+                if (currentShape) currentShape.c = true;
+            }
+        }
+        if (currentShape && currentShape.v.length > 0) lottieShapes.push(currentShape);
+
+        let cleanHex = bgColor.replace('#', '');
+        if (cleanHex.length === 3) cleanHex = cleanHex.split('').map(c => c + c).join('');
+        const r = parseInt(cleanHex.substring(0, 2), 16) / 255;
+        const g = parseInt(cleanHex.substring(2, 4), 16) / 255;
+        const b = parseInt(cleanHex.substring(4, 6), 16) / 255;
+
+        let textHex = textColor.replace('#', '');
+        if (textHex.length === 3) textHex = textHex.split('').map(c => c + c).join('');
+        const tr = parseInt(textHex.substring(0, 2), 16) / 255;
+        const tg = parseInt(textHex.substring(2, 4), 16) / 255;
+        const tb = parseInt(textHex.substring(4, 6), 16) / 255;
+
+        const baseDuration = Math.max(2500, text.length * 200);
+        const durationFrames = Math.floor((baseDuration / speed) / 1000 * 60);
+
+        const lottieJson = {
+            "v": "5.7.4",
+            "fr": 60,
+            "ip": 0,
+            "op": durationFrames + 60,
+            "w": width,
+            "h": height,
+            "nm": "Handwriting Export",
+            "ddd": 0,
+            "assets": [],
+            "layers": [
+                {
+                    "ty": 4,
+                    "nm": "Text Stroke",
+                    "ind": 1,
+                    "st": 0,
+                    "ip": 0,
+                    "op": durationFrames + 60,
+                    "ks": {
+                        "o": { "a": 0, "k": 100 },
+                        "r": { "a": 0, "k": 0 },
+                        "p": { "a": 0, "k": [0, 0, 0] },
+                        "a": { "a": 0, "k": [0, 0, 0] },
+                        "s": { "a": 0, "k": [100, 100, 100] }
+                    },
+                    "shapes": [
+                        {
+                            "ty": "gr",
+                            "nm": "Text Paths",
+                            "it": [
+                                ...lottieShapes.map((shape, index) => ({
+                                    "ty": "sh",
+                                    "nm": `Path ${index + 1}`,
+                                    "ks": { "a": 0, "k": shape }
+                                })),
+                                {
+                                    "ty": "st",
+                                    "c": { "a": 0, "k": [tr, tg, tb, 1] },
+                                    "w": { "a": 0, "k": 3 },
+                                    "lc": 2,
+                                    "lj": 2,
+                                    "nm": "Stroke"
+                                },
+                                {
+                                    "ty": "tm",
+                                    "nm": "Trim Paths",
+                                    "m": 2,
+                                    "s": { "a": 0, "k": 0 },
+                                    "e": {
+                                        "a": 1,
+                                        "k": [
+                                            {
+                                                "t": 0,
+                                                "s": [0],
+                                                "o": { "x": [0.25], "y": [0] },
+                                                "i": { "x": [0.25], "y": [1] }
+                                            },
+                                            {
+                                                "t": durationFrames,
+                                                "s": [100]
+                                            }
+                                        ]
+                                    },
+                                    "o": { "a": 0, "k": 0 }
+                                }
+                            ]
+                        }
+                    ]
+                },
+                {
+                    "ty": 1,
+                    "sw": width,
+                    "sh": height,
+                    "sc": bgColor,
+                    "nm": "Background",
+                    "ind": 2,
+                    "st": 0,
+                    "ip": 0,
+                    "op": durationFrames + 60,
+                    "ks": {
+                        "o": { "a": 0, "k": 100 },
+                        "r": { "a": 0, "k": 0 },
+                        "p": { "a": 0, "k": [width/2, height/2, 0] },
+                        "a": { "a": 0, "k": [width/2, height/2, 0] },
+                        "s": { "a": 0, "k": [100, 100, 100] }
+                    }
+                }
+            ]
+        };
+
+        const blob = new Blob([JSON.stringify(lottieJson)], { type: "application/json" });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement("a");
+        a.style.display = "none";
+        a.href = url;
+        a.download = `handwriting-${Date.now()}.json`;
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(() => {
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(url);
+        }, 100);
+    };
+
     const generateVideo = () => {
         if (!pathRef.current || isGenerating) return;
         setIsGenerating(true);
