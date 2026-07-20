@@ -37,6 +37,14 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
     const [showPencil, setShowPencil] = useState(false);
     const [speed, setSpeed] = useState(1);
     const [retryCount, setRetryCount] = useState(0);
+    const [lottieAnimation, setLottieAnimation] = useState(null);
+
+    useEffect(() => {
+        fetch('https://lottie.host/1046ae5b-2e59-47ce-bb6a-d5f7aaa2dddd/4m7zJ5OgRA.json')
+            .then(res => res.json())
+            .then(data => setLottieAnimation(data))
+            .catch(err => console.error("Error loading Lottie", err));
+    }, []);
 
     const getContrastColor = (hex) => {
         if (!hex) return '#ffffff';
@@ -290,11 +298,13 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                 <div className="relative z-10 flex-grow flex flex-col justify-center py-4 sm:py-0">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8 sm:mb-12">
                         <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 drop-shadow-lg">
-                            <Lottie 
-                                path="https://lottie.host/1046ae5b-2e59-47ce-bb6a-d5f7aaa2dddd/4m7zJ5OgRA.json" 
-                                loop={true} 
-                                autoplay={true} 
-                            />
+                            {lottieAnimation && (
+                                <Lottie 
+                                    animationData={lottieAnimation} 
+                                    loop={true} 
+                                    autoplay={true} 
+                                />
+                            )}
                         </div>
                         <div>
                             <h2 className="text-3xl sm:text-5xl font-extrabold mb-2 text-gray-900 dark:text-white tracking-tight drop-shadow-sm transition-colors duration-500">Handwriting Generator</h2>
