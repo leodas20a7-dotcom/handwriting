@@ -232,7 +232,8 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                 ctx.translate(-minX, -minY);
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                ctx.lineWidth = 80; // Thick enough to cover cursive strokes entirely
+                // Reduced lineWidth to 40 to create a crisper, tighter mask around the true line shape
+                ctx.lineWidth = 40; 
                 ctx.strokeStyle = '#000'; // Color doesn't matter for mask shape
                 ctx.stroke(maskPath);
                 ctx.restore();
@@ -332,7 +333,9 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                                         onChange={e => setSpeed(Number(e.target.value))}
                                         className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-black/20 focus:bg-white dark:focus:bg-black/40 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all outline-none appearance-none text-gray-900 dark:text-white font-medium text-lg shadow-inner cursor-pointer"
                                     >
-                                        <option value="0.5" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">0.5x (Slow)</option>
+                                        <option value="0.1" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">0.1x (Ultra Slow)</option>
+                                        <option value="0.25" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">0.25x (Super Slow)</option>
+                                        <option value="0.5" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">0.5x (Very Slow)</option>
                                         <option value="1" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">1x (Normal)</option>
                                         <option value="1.5" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">1.5x (Fast)</option>
                                         <option value="2" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">2x (Very Fast)</option>
