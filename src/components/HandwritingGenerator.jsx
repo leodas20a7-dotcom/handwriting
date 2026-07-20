@@ -446,13 +446,16 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
 
         recorder.start();
 
+        // Prevent browser bugs where getPointAtLength(totalLength) returns (0,0) by slightly reducing the max length
+        const safeLength = totalLength * 0.999; 
+        
         // Pre-calculate path points for performance to avoid calling getPointAtLength thousands of times per frame
         const pathPoints = [];
         const step = 5;
-        for (let i = 0; i <= totalLength; i += step) {
+        for (let i = 0; i <= safeLength; i += step) {
             pathPoints.push(pathRef.current.getPointAtLength(i));
         }
-        pathPoints.push(pathRef.current.getPointAtLength(totalLength));
+        pathPoints.push(pathRef.current.getPointAtLength(safeLength));
 
         const svgString = `
             <svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="${svgDimensions.viewBox}">
@@ -499,8 +502,8 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                 ctx.translate(-minX, -minY);
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                // Increased lineWidth to 60 to ensure all thick TTF cursive letters are fully covered by the tracing mask
-                ctx.lineWidth = 60; 
+                // Use a tighter brush to prevent revealing adjacent letters prematurely, creating a much better handwriting illusion
+                ctx.lineWidth = 25; 
                 ctx.strokeStyle = '#000'; // Color doesn't matter for mask shape
                 ctx.stroke(maskPath);
                 ctx.restore();
