@@ -1,18 +1,35 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
-body {
+@custom-variant dark (&:is(.dark *));
+
+@theme {
+  --font-sans: "Outfit", sans-serif;
+  --animate-mesh: mesh 15s ease-in-out infinite;
+  --animate-shimmer: shimmer 2s linear infinite;
+}
+
+@keyframes mesh {
+  0%, 100% { transform: scale(1) translate(0, 0); }
+  25% { transform: scale(1.1) translate(2%, 2%); }
+  50% { transform: scale(1) translate(-2%, 4%); }
+  75% { transform: scale(1.05) translate(-4%, -2%); }
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+html, body {
+  font-family: 'Outfit', sans-serif;
+  overflow-x: hidden;
   margin: 0;
-  display: flex;
-  place-items: center;
-  min-width: 320px;
   min-height: 100vh;
-  background-color: #f9fafb;
 }
 
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
   width: 100%;
+  margin: 0;
+  padding: 0;
 }

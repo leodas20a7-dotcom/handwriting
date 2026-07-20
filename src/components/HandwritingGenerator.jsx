@@ -14,7 +14,15 @@ const AVAILABLE_FONTS = [
     { name: 'Sacramento', url: sacramentoUrl },
 ];
 
-export default function HandwritingGenerator() {
+const PRESET_COLORS = [
+    { name: 'Obsidian', value: '#1a1a24' },
+    { name: 'Deep Space', value: '#0f1115' },
+    { name: 'Chroma Green', value: '#00ff00' },
+    { name: 'Cyberpunk Pink', value: '#ff007f' },
+    { name: 'Pure White', value: '#ffffff' },
+];
+
+export default function HandwritingGenerator({ isDark, setIsDark }) {
     const [text, setText] = useState('Hand Writing');
     const [pathData, setPathData] = useState('');
     const [svgDimensions, setSvgDimensions] = useState({ width: 500, height: 200, viewBox: '0 0 500 200' });
@@ -24,7 +32,7 @@ export default function HandwritingGenerator() {
     const [selectedFontUrl, setSelectedFontUrl] = useState(AVAILABLE_FONTS[0].url);
     const [fontError, setFontError] = useState(null);
     const [fontLoadingProgress, setFontLoadingProgress] = useState(null);
-    const [bgColor, setBgColor] = useState('#00ff00'); // Green screen by default
+    const [bgColor, setBgColor] = useState(PRESET_COLORS[0].value); 
     const [showPencil, setShowPencil] = useState(false);
     const [retryCount, setRetryCount] = useState(0);
 
@@ -201,82 +209,109 @@ export default function HandwritingGenerator() {
     };
 
     return (
-        <div className="p-0 sm:p-4 md:p-8 max-w-7xl mx-auto w-full">
-            <div className="bg-white sm:rounded-2xl shadow-none sm:shadow-lg border-y sm:border border-gray-100 p-6 sm:p-8 overflow-hidden relative min-h-screen sm:min-h-0 flex flex-col justify-center">
+        <div className="p-0 sm:p-4 md:p-8 max-w-7xl mx-auto w-full relative z-10">
+            {/* Theme Toggle Button */}
+            <button 
+                onClick={() => setIsDark(!isDark)}
+                className="absolute top-4 right-4 sm:top-8 sm:right-8 z-50 p-3 rounded-full bg-white/50 dark:bg-black/20 backdrop-blur-md border border-gray-200 dark:border-white/10 text-gray-800 dark:text-white hover:scale-110 hover:shadow-lg transition-all shadow-md"
+                title="Toggle Theme"
+            >
+                {isDark ? '☀️' : '🌙'}
+            </button>
 
-                <div className="absolute top-0 left-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>
-                <div className="absolute bottom-0 right-0 w-64 h-64 bg-purple-500/10 rounded-full blur-3xl translate-x-1/2 translate-y-1/2 pointer-events-none"></div>
+            {/* Glassmorphic Container */}
+            <div className="bg-white/60 dark:bg-white/[0.03] backdrop-blur-3xl sm:rounded-3xl shadow-xl dark:shadow-[0_8px_32px_rgba(0,0,0,0.4)] border-y sm:border border-white/60 dark:border-white/[0.08] p-6 sm:p-10 overflow-hidden relative min-h-screen sm:min-h-0 flex flex-col justify-center transition-colors duration-500">
 
                 <div className="relative z-10 flex-grow flex flex-col justify-center py-4 sm:py-0">
-                    <h2 className="text-2xl sm:text-3xl font-extrabold mb-2 text-gray-800 tracking-tight">Handwriting Generator</h2>
-                    <p className="text-sm sm:text-base text-gray-500 mb-6 sm:mb-8">Type text to generate a video of it being written.</p>
+                    <h2 className="text-3xl sm:text-5xl font-extrabold mb-3 text-gray-900 dark:text-white tracking-tight drop-shadow-sm transition-colors duration-500">Handwriting Generator</h2>
+                    <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 mb-8 sm:mb-12 font-light transition-colors duration-500">Type text to generate a beautifully animated handwriting video.</p>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 sm:gap-10">
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16">
+                        {/* Left Column - Controls */}
                         <div className="flex flex-col">
-                            <div className="flex flex-col gap-2 relative mb-6">
-                                <label className="text-sm font-semibold text-gray-700">Your Text</label>
+                            {/* Input Field */}
+                            <div className="flex flex-col gap-3 relative mb-8 group">
+                                <label className="text-xs tracking-wider uppercase font-semibold text-gray-500 dark:text-gray-400 transition-colors group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400">Your Text</label>
                                 <input 
                                     type="text" 
                                     value={text} 
                                     onChange={e => setText(e.target.value)} 
-                                    className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none bg-white text-gray-700 font-medium placeholder-gray-400"
+                                    className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-black/20 focus:bg-white dark:focus:bg-black/40 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all outline-none text-gray-900 dark:text-white font-medium placeholder-gray-400 dark:placeholder-gray-600 text-lg shadow-inner"
                                     placeholder="Type something amazing..."
                                 />
                             </div>
 
-                            <div className="flex flex-col gap-2 mb-6">
-                                <label className="text-sm font-semibold text-gray-700">Font Style</label>
+                            {/* Font Selection */}
+                            <div className="flex flex-col gap-3 mb-8 group">
+                                <label className="text-xs tracking-wider uppercase font-semibold text-gray-500 dark:text-gray-400 transition-colors group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400">Font Style</label>
                                 <div className="relative">
                                     <select 
                                         value={selectedFontUrl} 
                                         onChange={e => setSelectedFontUrl(e.target.value)}
-                                        className="w-full px-4 py-3 rounded-xl border border-gray-200 focus:border-blue-500 focus:ring-2 focus:ring-blue-200 transition-all outline-none appearance-none bg-white text-gray-700 font-medium"
+                                        className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-black/20 focus:bg-white dark:focus:bg-black/40 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all outline-none appearance-none text-gray-900 dark:text-white font-medium text-lg shadow-inner cursor-pointer"
                                     >
                                         {AVAILABLE_FONTS.map(f => (
-                                            <option key={f.name} value={f.url}>{f.name}</option>
+                                            <option key={f.name} value={f.url} className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">{f.name}</option>
                                         ))}
                                     </select>
-                                    <div className="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-gray-500">
-                                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M19 9l-7 7-7-7"></path></svg>
+                                    <div className="absolute inset-y-0 right-0 flex items-center px-5 pointer-events-none text-gray-400">
+                                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7"></path></svg>
                                     </div>
                                 </div>
                             </div>
 
-                            <div className="flex flex-col gap-2">
-                                <label className="text-sm font-semibold text-gray-700">Background Color (e.g. Green Screen)</label>
-                                <div className="flex items-center gap-3">
-                                    <input 
-                                        type="color" 
-                                        value={bgColor} 
-                                        onChange={e => setBgColor(e.target.value)} 
-                                        className="w-10 h-10 rounded cursor-pointer border-0 p-0"
-                                    />
-                                    <span className="text-sm text-gray-500 font-mono">{bgColor}</span>
+                            {/* Background Color Picker */}
+                            <div className="flex flex-col gap-3 mb-8">
+                                <label className="text-xs tracking-wider uppercase font-semibold text-gray-500 dark:text-gray-400">Background Color</label>
+                                <div className="flex items-center gap-3 flex-wrap">
+                                    {PRESET_COLORS.map(color => (
+                                        <button
+                                            key={color.name}
+                                            onClick={() => setBgColor(color.value)}
+                                            title={color.name}
+                                            className={`w-12 h-12 rounded-full cursor-pointer transition-all duration-300 border-2 ${bgColor === color.value ? 'scale-110 border-gray-800 dark:border-white shadow-[0_0_15px_rgba(0,0,0,0.2)] dark:shadow-[0_0_15px_rgba(255,255,255,0.3)]' : 'border-transparent hover:scale-105 hover:shadow-lg'}`}
+                                            style={{ backgroundColor: color.value }}
+                                        />
+                                    ))}
+                                    <div className="relative group">
+                                        <input 
+                                            type="color" 
+                                            value={bgColor} 
+                                            onChange={e => setBgColor(e.target.value)} 
+                                            className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                                            title="Custom Color"
+                                        />
+                                        <div className="w-12 h-12 rounded-full cursor-pointer border border-gray-200 dark:border-white/20 bg-white/50 dark:bg-black/30 flex items-center justify-center group-hover:bg-white dark:group-hover:bg-black/50 transition-colors shadow-sm">
+                                            <svg className="w-5 h-5 text-gray-600 dark:text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6"/></svg>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
-                            {/* Show Pencil Checkbox */}
-                            <div className="flex items-center gap-3 mt-2 bg-gray-50 p-4 rounded-xl border border-gray-100">
-                                <input 
-                                    type="checkbox" 
-                                    id="showPencil" 
-                                    checked={showPencil} 
-                                    onChange={e => setShowPencil(e.target.checked)} 
-                                    className="w-5 h-5 rounded border-gray-300 text-gray-900 focus:ring-gray-900 cursor-pointer"
-                                />
-                                <label htmlFor="showPencil" className="text-sm font-semibold text-gray-700 select-none cursor-pointer flex items-center gap-2">
-                                    <span>Show Pencil Writing Effect</span>
-                                    <span className="text-xl">✏️</span>
+                            {/* Animated Toggle Switch */}
+                            <div className="flex items-center justify-between mt-2 bg-white/50 dark:bg-black/20 p-5 rounded-2xl border border-gray-100 dark:border-white/5 shadow-inner transition-colors duration-500">
+                                <label htmlFor="showPencil" className="text-base font-medium text-gray-800 dark:text-gray-200 select-none cursor-pointer flex items-center gap-3 transition-colors duration-500">
+                                    <span className="p-2 bg-gray-100 dark:bg-white/10 rounded-xl text-xl">✏️</span>
+                                    Show Pencil Animation
                                 </label>
+                                <button
+                                    id="showPencil"
+                                    onClick={() => setShowPencil(!showPencil)}
+                                    className={`relative inline-flex h-7 w-12 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900 ${showPencil ? 'bg-indigo-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                >
+                                    <span className={`inline-block h-5 w-5 transform rounded-full bg-white transition-transform duration-300 shadow-sm ${showPencil ? 'translate-x-6' : 'translate-x-1'}`} />
+                                </button>
                             </div>
                             
-                            <hr className="border-gray-100 mt-8 mb-8" />
-                            <div className="flex flex-col sm:flex-row flex-wrap gap-4 items-start w-full">
+                            <hr className="border-gray-200 dark:border-white/10 mt-10 mb-10 transition-colors duration-500" />
+                            
+                            <div className="flex flex-col sm:flex-row flex-wrap gap-5 items-start w-full">
                                 <button
                                     onClick={generateVideo}
                                     disabled={isGenerating || !font || !text}
-                                    className="w-full sm:w-auto bg-gray-900 hover:bg-gray-800 text-white px-8 py-3.5 sm:py-3 rounded-xl disabled:opacity-50 font-semibold transition-all shadow-md hover:shadow-lg active:scale-95 flex items-center justify-center gap-2"
+                                    className="w-full sm:w-auto relative group overflow-hidden bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-10 py-4 rounded-2xl disabled:opacity-50 font-bold text-lg transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)] dark:shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.5)] dark:hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] active:scale-95 flex items-center justify-center gap-3 border border-white/20"
                                 >
+                                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
                                     {isGenerating ? (
                                         <>
                                             <svg className="animate-spin -ml-1 mr-2 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
@@ -285,17 +320,22 @@ export default function HandwritingGenerator() {
                                             </svg>
                                             Recording Canvas...
                                         </>
-                                    ) : 'Generate Video'}
+                                    ) : (
+                                        <>
+                                            <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z"></path><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                            Generate Video
+                                        </>
+                                    )}
                                 </button>
 
                                 {videoUrl && (
                                     <a
                                         href={videoUrl.url}
                                         download={`handwriting.${videoUrl.ext}`}
-                                        className="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white px-6 py-3.5 sm:py-3 rounded-xl font-medium transition-all shadow-md hover:shadow-lg flex items-center justify-center gap-2"
+                                        className="w-full sm:w-auto bg-white/60 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 backdrop-blur-md text-gray-900 dark:text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 border border-gray-200 dark:border-white/20"
                                     >
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
-                                            <path fillRule="evenodd" d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z" clipRule="evenodd" />
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
                                         </svg>
                                         Download .{videoUrl.ext}
                                     </a>
@@ -303,32 +343,41 @@ export default function HandwritingGenerator() {
                             </div>
                         </div>
 
-                        {/* Right Column */}
+                        {/* Right Column - Live Preview */}
                         <div className="flex flex-col gap-6 w-full">
-                            <div className="relative border-2 border-dashed border-gray-700 rounded-xl flex flex-col items-center justify-center p-4 sm:p-6 min-h-[200px] sm:min-h-[300px] overflow-hidden transition-colors w-full" style={{ backgroundColor: bgColor }}>
-                                <div className="absolute top-4 left-4 text-xs font-bold text-gray-400 uppercase tracking-wider mix-blend-difference">Live Preview</div>
+                            <div 
+                                className="relative rounded-3xl flex flex-col items-center justify-center p-4 sm:p-8 min-h-[250px] sm:min-h-[350px] overflow-hidden transition-all duration-500 w-full border border-gray-200 dark:border-white/10 group" 
+                                style={{ 
+                                    backgroundColor: bgColor,
+                                    boxShadow: `0 0 60px -15px ${bgColor}` // Dynamic glow matching background
+                                }}
+                            >
+                                {/* Inner glass reflection */}
+                                <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 dark:via-white/5 to-white/40 dark:to-white/20 pointer-events-none rounded-3xl"></div>
+                                
+                                <div className="absolute top-5 left-5 text-[10px] font-bold text-gray-800/50 dark:text-white/50 uppercase tracking-[0.2em] mix-blend-normal dark:mix-blend-screen backdrop-blur-md bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10">Live Preview</div>
 
                                 {!font && fontLoadingProgress === null && !fontError && (
                                     <button
                                         onClick={loadPreview}
-                                        className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-xl font-medium transition-all shadow-md hover:shadow-lg relative z-10"
+                                        className="bg-white/60 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 text-gray-900 dark:text-white backdrop-blur-md px-8 py-4 rounded-xl font-medium transition-all shadow-xl relative z-10 border border-gray-200 dark:border-white/20"
                                     >
                                         Load Preview
                                     </button>
                                 )}
 
                                 {fontLoadingProgress !== null && (
-                                    <div className="flex flex-col items-center justify-center w-full max-w-xs relative z-10">
-                                        <div className="text-sm font-medium text-gray-600 mb-2 mix-blend-difference">Loading Font... {fontLoadingProgress}%</div>
-                                        <div className="w-full bg-gray-200/20 rounded-full h-2.5">
-                                            <div className="bg-white h-2.5 rounded-full transition-all duration-300" style={{ width: `${fontLoadingProgress}%` }}></div>
+                                    <div className="flex flex-col items-center justify-center w-full max-w-xs relative z-10 bg-white/60 dark:bg-black/40 backdrop-blur-md p-6 rounded-2xl border border-gray-200 dark:border-white/10 shadow-xl">
+                                        <div className="text-sm font-semibold text-gray-800 dark:text-white/80 mb-3">Loading Font... {fontLoadingProgress}%</div>
+                                        <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2 shadow-inner">
+                                            <div className="bg-indigo-500 h-2 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(99,102,241,0.5)] dark:shadow-[0_0_10px_rgba(99,102,241,0.8)]" style={{ width: `${fontLoadingProgress}%` }}></div>
                                         </div>
                                     </div>
                                 )}
 
                                 {font && fontLoadingProgress === null && (
-                                    <div className="w-full flex flex-col items-center">
-                                        <svg key={text} ref={svgRef} width={svgDimensions.width} height={svgDimensions.height} viewBox={svgDimensions.viewBox} className="max-w-full h-auto drop-shadow-md relative z-10" style={{ overflow: 'visible' }}>
+                                    <div className="w-full flex flex-col items-center relative z-10 transition-transform duration-500 group-hover:scale-105">
+                                        <svg key={text} ref={svgRef} width={svgDimensions.width} height={svgDimensions.height} viewBox={svgDimensions.viewBox} className="max-w-full h-auto drop-shadow-2xl" style={{ overflow: 'visible' }}>
                                             <path 
                                                 ref={pathRef}
                                                 d={pathData} 
@@ -341,15 +390,15 @@ export default function HandwritingGenerator() {
                                 )}
 
                                 {fontError && (
-                                    <div className="flex flex-col items-center justify-center text-red-500 text-center relative z-10">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <div className="flex flex-col items-center justify-center bg-red-50 dark:bg-red-500/20 backdrop-blur-md border border-red-200 dark:border-red-500/30 p-8 rounded-2xl text-center relative z-10 shadow-xl">
+                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-4 text-red-500 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                                         </svg>
-                                        <span className="font-bold">Failed to load font</span>
-                                        <span className="text-sm mt-1">{fontError}</span>
+                                        <span className="font-bold text-gray-900 dark:text-white text-lg">Failed to load font</span>
+                                        <span className="text-sm mt-2 text-red-600 dark:text-red-200">{fontError}</span>
                                         <button
                                             onClick={loadPreview}
-                                            className="mt-4 bg-red-100 hover:bg-red-200 text-red-700 px-4 py-2 rounded-lg font-medium transition-all"
+                                            className="mt-6 bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg"
                                         >
                                             Retry
                                         </button>
@@ -358,10 +407,11 @@ export default function HandwritingGenerator() {
                             </div>
 
                             {videoUrl && (
-                                <div className="animate-in fade-in slide-in-from-bottom-4 duration-500 bg-gray-50 border border-gray-100 p-6 rounded-xl">
-                                    <h3 className="text-sm font-bold mb-3 text-gray-800 uppercase tracking-wider">Video Result ({videoUrl.ext.toUpperCase()})</h3>
-                                    <div className="bg-[url('https://www.transparenttextures.com/patterns/cubes.png')] bg-blue-50 border border-blue-200 p-4 rounded-lg shadow-inner flex items-center justify-center min-h-[150px]">
-                                        <video src={videoUrl.url} autoPlay loop muted className="max-w-full rounded drop-shadow-md" />
+                                <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 bg-white/60 dark:bg-white/5 backdrop-blur-xl border border-gray-200 dark:border-white/10 p-6 rounded-3xl shadow-2xl relative overflow-hidden transition-colors duration-500">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-pink-500/10 pointer-events-none"></div>
+                                    <h3 className="text-xs font-bold mb-4 text-gray-500 dark:text-white/50 uppercase tracking-widest relative z-10">Final Render ({videoUrl.ext.toUpperCase()})</h3>
+                                    <div className="bg-gray-100 dark:bg-black/40 border border-gray-200 dark:border-white/5 p-2 rounded-2xl shadow-inner flex items-center justify-center relative z-10 transition-colors duration-500">
+                                        <video src={videoUrl.url} autoPlay loop muted className="w-full rounded-xl drop-shadow-2xl" />
                                     </div>
                                 </div>
                             )}
