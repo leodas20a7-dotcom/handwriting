@@ -153,10 +153,17 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
             p.extend(wordPath);
             currentX += wordWidth;
         }
+        const f = (num) => (Math.round(num * 100) / 100);
+        let pathDataStr = '';
+        for (const c of p.commands) {
+            if (c.type === 'M') pathDataStr += `M${f(c.x)} ${f(c.y)}`;
+            else if (c.type === 'L') pathDataStr += `L${f(c.x)} ${f(c.y)}`;
+            else if (c.type === 'C') pathDataStr += `C${f(c.x1)} ${f(c.y1)} ${f(c.x2)} ${f(c.y2)} ${f(c.x)} ${f(c.y)}`;
+            else if (c.type === 'Q') pathDataStr += `Q${f(c.x1)} ${f(c.y1)} ${f(c.x)} ${f(c.y)}`;
+            else if (c.type === 'Z') pathDataStr += 'Z';
+        }
         
-        let rawPathData = p.toPathData(2);
-        let sanitizedPathData = rawPathData.replace(/[a-zA-Z][^a-zA-Z]*NaN[^a-zA-Z]*/g, '');
-        setPathData(sanitizedPathData);
+        setPathData(pathDataStr);
 
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         for (const cmd of p.commands) {
