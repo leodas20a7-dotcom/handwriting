@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import HandwritingGenerator from './components/HandwritingGenerator'
 
-export default function App() {
+function App() {
   const [isDark, setIsDark] = useState(true);
 
   return (
@@ -22,3 +22,5 @@ export default function App() {
     </div>
   )
 }
+
+export default App
