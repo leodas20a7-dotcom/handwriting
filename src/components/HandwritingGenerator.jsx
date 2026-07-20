@@ -1,18 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import opentype from 'opentype.js';
-import pacificoUrl from '../assets/Pacifico-Regular.ttf';
-import dancingScriptUrl from '@fontsource/dancing-script/files/dancing-script-latin-400-normal.woff?url';
-import caveatUrl from '@fontsource/caveat/files/caveat-latin-400-normal.woff?url';
-import satisfyUrl from '@fontsource/satisfy/files/satisfy-latin-400-normal.woff?url';
-import sacramentoUrl from '@fontsource/sacramento/files/sacramento-latin-400-normal.woff?url';
-
-const AVAILABLE_FONTS = [
-    { name: 'Pacifico', url: pacificoUrl },
-    { name: 'Dancing Script', url: dancingScriptUrl },
-    { name: 'Caveat', url: caveatUrl },
-    { name: 'Satisfy', url: satisfyUrl },
-    { name: 'Sacramento', url: sacramentoUrl },
-];
+import { HERSHEY_FONTS, getHersheyPathData } from '../utils/hershey.js';
 
 const PRESET_COLORS = [
     { name: 'Obsidian', value: '#1a1a24' },
@@ -28,14 +15,12 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
     const [svgDimensions, setSvgDimensions] = useState({ width: 500, height: 200, viewBox: '0 0 500 200' });
     const [isGenerating, setIsGenerating] = useState(false);
     const [videoUrl, setVideoUrl] = useState(null);
-    const [font, setFont] = useState(null);
-    const [selectedFontUrl, setSelectedFontUrl] = useState(AVAILABLE_FONTS[0].url);
-    const [fontError, setFontError] = useState(null);
-    const [fontLoadingProgress, setFontLoadingProgress] = useState(null);
+    const [selectedFont, setSelectedFont] = useState(HERSHEY_FONTS[0].value);
     const [bgColor, setBgColor] = useState(PRESET_COLORS[0].value); 
     const [showPencil, setShowPencil] = useState(false);
     const [speed, setSpeed] = useState(1);
-    const [retryCount, setRetryCount] = useState(0);
+    const [pathPoints, setPathPoints] = useState([]);
+    const [totalLength, setTotalLength] = useState(0);
 
     const loadingPhrases = [
         "Sharpening virtual pencils...",
@@ -52,7 +37,7 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
             setLoadingPhraseIndex(0);
             interval = setInterval(() => {
                 setLoadingPhraseIndex(prev => (prev + 1) % loadingPhrases.length);
-            }, 2000); // Change phrase every 2 seconds
+            }, 2000);
         }
         return () => clearInterval(interval);
     }, [isGenerating]);
@@ -60,9 +45,7 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
     const getContrastColor = (hex) => {
         if (!hex) return '#ffffff';
         let cleanHex = hex.replace('#', '');
-        if (cleanHex.length === 3) {
-            cleanHex = cleanHex.split('').map(c => c + c).join('');
-        }
+        if (cleanHex.length === 3) cleanHex = cleanHex.split('').map(c => c + c).join('');
         if (cleanHex.length !== 6) return '#ffffff';
         const r = parseInt(cleanHex.substring(0, 2), 16);
         const g = parseInt(cleanHex.substring(2, 4), 16);
@@ -73,171 +56,92 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
 
     const textColor = getContrastColor(bgColor);
 
-    const loadPreview = () => setRetryCount(c => c + 1);
-
     const svgRef = useRef(null);
     const pathRef = useRef(null);
     const canvasRef = useRef(null);
 
+    // Generate Path Data dynamically on text or font change
     useEffect(() => {
-        const loadFont = async () => {
-            try {
-                setFontLoadingProgress(0);
-                setFontError(null);
-                
-                const response = await fetch(selectedFontUrl);
-                if (!response.ok) throw new Error('Failed to fetch font file');
-
-                const contentLength = response.headers.get('content-length');
-                const total = parseInt(contentLength, 10);
-
-                const reader = response.body.getReader();
-                let receivedLength = 0;
-                const chunks = [];
-
-                while (true) {
-                    const { done, value } = await reader.read();
-                    if (done) break;
-
-                    chunks.push(value);
-                    receivedLength += value.length;
-
-                    if (total) {
-                        const percentage = Math.round((receivedLength / total) * 100);
-                        setFontLoadingProgress(percentage);
-                    } else {
-                        setFontLoadingProgress(prev => prev === null ? 10 : Math.min(prev + 10, 99));
-                    }
-                }
-
-                const chunksAll = new Uint8Array(receivedLength);
-                let position = 0;
-                for (let chunk of chunks) {
-                    chunksAll.set(chunk, position);
-                    position += chunk.length;
-                }
-
-                const buffer = chunksAll.buffer;
-                const loadedFont = opentype.parse(buffer);
-                setFont(loadedFont);
-                setFontLoadingProgress(100);
-                setTimeout(() => setFontLoadingProgress(null), 1000);
-
-            } catch (err) {
-                console.error('Could not load font:', err);
-                setFontError(err.toString());
-                setFontLoadingProgress(null);
-            }
-        };
-        
-        loadFont();
-    }, [selectedFontUrl, retryCount]);
-
-    useEffect(() => {
-        if (!font || !text) return;
-        const fontSize = 120;
-        const p = font.getPath(text, 0, 0, fontSize);
-        
-        let rawPathData = p.toPathData(2);
-        let sanitizedPathData = rawPathData.replace(/[a-zA-Z][^a-zA-Z]*NaN[^a-zA-Z]*/g, '');
-        setPathData(sanitizedPathData);
-
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (const cmd of p.commands) {
-            if (cmd.x !== undefined && !isNaN(cmd.x)) { minX = Math.min(minX, cmd.x); maxX = Math.max(maxX, cmd.x); }
-            if (cmd.y !== undefined && !isNaN(cmd.y)) { minY = Math.min(minY, cmd.y); maxY = Math.max(maxY, cmd.y); }
-            if (cmd.x1 !== undefined && !isNaN(cmd.x1)) { minX = Math.min(minX, cmd.x1); maxX = Math.max(maxX, cmd.x1); }
-            if (cmd.y1 !== undefined && !isNaN(cmd.y1)) { minY = Math.min(minY, cmd.y1); maxY = Math.max(maxY, cmd.y1); }
-            if (cmd.x2 !== undefined && !isNaN(cmd.x2)) { minX = Math.min(minX, cmd.x2); maxX = Math.max(maxX, cmd.x2); }
-            if (cmd.y2 !== undefined && !isNaN(cmd.y2)) { minY = Math.min(minY, cmd.y2); maxY = Math.max(maxY, cmd.y2); }
+        if (!text) {
+            setPathData('');
+            setPathPoints([]);
+            return;
         }
-        if (minX === Infinity) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
+        
+        const { pathData: newPathData, width, height } = getHersheyPathData(text, selectedFont);
+        setPathData(newPathData);
+        
+        // Wait for React to render the <path> so we can calculate its length
+        setTimeout(() => {
+            if (pathRef.current) {
+                try {
+                    const len = pathRef.current.getTotalLength();
+                    setTotalLength(len);
+                    
+                    // Pre-calculate points for Canvas animation
+                    const pts = [];
+                    const step = 5;
+                    for (let i = 0; i <= len; i += step) {
+                        pts.push(pathRef.current.getPointAtLength(i));
+                    }
+                    pts.push(pathRef.current.getPointAtLength(len));
+                    setPathPoints(pts);
+                } catch(e) {
+                    console.error("Error calculating path length", e);
+                }
+            }
+        }, 50);
 
-        const padding = 150;
-        const viewBoxStr = `${minX - padding} ${minY - padding} ${maxX - minX + padding * 2} ${maxY - minY + padding * 2}`;
+        // Center the path in viewBox
+        const padding = 20;
+        const minX = -padding;
+        const minY = -10 - padding;
+        const maxX = width + padding;
+        const maxY = height + padding;
+        
+        const viewBoxStr = `${minX} ${minY} ${maxX - minX} ${maxY - minY}`;
 
         setSvgDimensions({
-            width: maxX - minX + padding * 2,
-            height: maxY - minY + padding * 2,
+            width: maxX - minX,
+            height: maxY - minY,
             viewBox: viewBoxStr
         });
-    }, [text, font]);
+    }, [text, selectedFont]);
 
     const handleDownloadLottie = () => {
-        if (!font || !text) return;
-        
-        const fontSize = 120;
-        const p = font.getPath(text, 0, 0, fontSize);
-        
-        let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-        for (const cmd of p.commands) {
-            if (cmd.x !== undefined && !isNaN(cmd.x)) { minX = Math.min(minX, cmd.x); maxX = Math.max(maxX, cmd.x); }
-            if (cmd.y !== undefined && !isNaN(cmd.y)) { minY = Math.min(minY, cmd.y); maxY = Math.max(maxY, cmd.y); }
-            if (cmd.x1 !== undefined && !isNaN(cmd.x1)) { minX = Math.min(minX, cmd.x1); maxX = Math.max(maxX, cmd.x1); }
-            if (cmd.y1 !== undefined && !isNaN(cmd.y1)) { minY = Math.min(minY, cmd.y1); maxY = Math.max(maxY, cmd.y1); }
-            if (cmd.x2 !== undefined && !isNaN(cmd.x2)) { minX = Math.min(minX, cmd.x2); maxX = Math.max(maxX, cmd.x2); }
-            if (cmd.y2 !== undefined && !isNaN(cmd.y2)) { minY = Math.min(minY, cmd.y2); maxY = Math.max(maxY, cmd.y2); }
-        }
-        if (minX === Infinity) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
+        if (!text || !pathData) return;
 
-        const padding = 150;
-        const width = maxX - minX + padding * 2;
-        const height = maxY - minY + padding * 2;
-        const offsetX = -minX + padding;
-        const offsetY = -minY + padding;
+        const padding = 20;
+        const { width: textWidth, height: textHeight } = getHersheyPathData(text, selectedFont);
+        
+        const width = textWidth + padding * 2;
+        const height = textHeight + padding * 2;
+        const offsetX = padding;
+        const offsetY = padding + 10; // Hershey paths go negative Y, shift down
 
         const lottieShapes = [];
         let currentShape = null;
-        let prevX = 0, prevY = 0;
 
-        for (const cmd of p.commands) {
-            const x = cmd.x !== undefined ? cmd.x + offsetX : 0;
-            const y = cmd.y !== undefined ? cmd.y + offsetY : 0;
-            const x1 = cmd.x1 !== undefined ? cmd.x1 + offsetX : 0;
-            const y1 = cmd.y1 !== undefined ? cmd.y1 + offsetY : 0;
-            const x2 = cmd.x2 !== undefined ? cmd.x2 + offsetX : 0;
-            const y2 = cmd.y2 !== undefined ? cmd.y2 + offsetY : 0;
+        // Simple SVG path parser for M and L commands
+        const regex = /([ML])\s*([\d.-]+)\s*,\s*([\d.-]+)/g;
+        let match;
+        while ((match = regex.exec(pathData)) !== null) {
+            const cmd = match[1];
+            const x = parseFloat(match[2]) + offsetX;
+            const y = parseFloat(match[3]) + offsetY;
 
-            if (cmd.type === 'M') {
+            if (cmd === 'M') {
                 if (currentShape && currentShape.v.length > 0) lottieShapes.push(currentShape);
                 currentShape = { c: false, i: [], o: [], v: [] };
                 currentShape.v.push([x, y]);
                 currentShape.i.push([0, 0]);
                 currentShape.o.push([0, 0]);
-                prevX = x;
-                prevY = y;
-            } else if (cmd.type === 'L') {
-                if (!currentShape) continue;
-                currentShape.v.push([x, y]);
-                currentShape.i.push([0, 0]);
-                currentShape.o.push([0, 0]);
-                prevX = x;
-                prevY = y;
-            } else if (cmd.type === 'Q') {
-                if (!currentShape) continue;
-                const cx1 = prevX + 2.0/3.0 * (x1 - prevX);
-                const cy1 = prevY + 2.0/3.0 * (y1 - prevY);
-                const cx2 = x + 2.0/3.0 * (x1 - x);
-                const cy2 = y + 2.0/3.0 * (y1 - y);
-                
-                const lastIdx = currentShape.v.length - 1;
-                currentShape.o[lastIdx] = [cx1 - prevX, cy1 - prevY];
-                currentShape.v.push([x, y]);
-                currentShape.i.push([cx2 - x, cy2 - y]);
-                currentShape.o.push([0, 0]);
-                prevX = x;
-                prevY = y;
-            } else if (cmd.type === 'C') {
-                if (!currentShape) continue;
-                const lastIdx = currentShape.v.length - 1;
-                currentShape.o[lastIdx] = [x1 - prevX, y1 - prevY];
-                currentShape.v.push([x, y]);
-                currentShape.i.push([x2 - x, y2 - y]);
-                currentShape.o.push([0, 0]);
-                prevX = x;
-                prevY = y;
-            } else if (cmd.type === 'Z') {
-                if (currentShape) currentShape.c = true;
+            } else if (cmd === 'L') {
+                if (currentShape) {
+                    currentShape.v.push([x, y]);
+                    currentShape.i.push([0, 0]);
+                    currentShape.o.push([0, 0]);
+                }
             }
         }
         if (currentShape && currentShape.v.length > 0) lottieShapes.push(currentShape);
@@ -362,20 +266,18 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
     };
 
     const generateVideo = () => {
-        if (!pathRef.current || isGenerating) return;
+        if (!pathRef.current || isGenerating || !text || pathPoints.length === 0) return;
         setIsGenerating(true);
         setVideoUrl(null);
         
-        // Defer heavy execution by 50ms to allow React to paint the "Recording Canvas..." spinner immediately
         setTimeout(() => {
             executeVideoGeneration();
         }, 50);
     };
 
     const executeVideoGeneration = async () => {
-        if (!pathRef.current) return;
+        if (!pathRef.current || pathPoints.length === 0) return;
 
-        const totalLength = pathRef.current.getTotalLength();
         const canvas = canvasRef.current;
         const ctx = canvas.getContext('2d');
 
@@ -407,104 +309,92 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
 
         recorder.start();
 
-        // Pre-calculate path points for performance to avoid calling getPointAtLength thousands of times per frame
-        const pathPoints = [];
+        let start = null;
+        const baseDuration = Math.max(2500, text.length * 200);
+        const duration = baseDuration / speed;
+        const viewBoxParts = svgDimensions.viewBox.split(' ').map(Number);
+        const minX = viewBoxParts[0];
+        const minY = viewBoxParts[1];
         const step = 5;
-        for (let i = 0; i <= totalLength; i += step) {
-            pathPoints.push(pathRef.current.getPointAtLength(i));
-        }
-        pathPoints.push(pathRef.current.getPointAtLength(totalLength));
-
-        const svgString = `
-            <svg xmlns="http://www.w3.org/2000/svg" width="${canvas.width}" height="${canvas.height}" viewBox="${svgDimensions.viewBox}">
-                <path d="${pathData}" fill="${textColor}" stroke="${textColor}" stroke-width="1" />
-            </svg>
-        `;
         
-        const img = new Image();
-        const blob = new Blob([svgString], { type: 'image/svg+xml' });
-        const url = URL.createObjectURL(blob);
-        
-        img.onload = () => {
-            URL.revokeObjectURL(url);
+        const drawFrame = (timestamp) => {
+            if (!start) start = timestamp;
+            const elapsed = timestamp - start;
+            const rawProgress = elapsed / duration;
+            const progress = Math.min(rawProgress, 1.0);
             
-            let start = null;
-            const baseDuration = Math.max(2500, text.length * 200);
-            const duration = baseDuration / speed;
-            const viewBoxParts = svgDimensions.viewBox.split(' ').map(Number);
-            const minX = viewBoxParts[0];
-            const minY = viewBoxParts[1];
+            // 1. Draw Background
+            ctx.fillStyle = bgColor;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
             
-            const drawFrame = (timestamp) => {
-                if (!start) start = timestamp;
-                const elapsed = timestamp - start;
-                const rawProgress = elapsed / duration;
-                const progress = Math.min(rawProgress, 1.0);
-                
-                // 1. Clear canvas (must be transparent for source-in mask to work)
-                ctx.clearRect(0, 0, canvas.width, canvas.height);
-                
-                // 2. Draw the growing "worm" mask tracing the path
-                const currentLength = totalLength * progress;
-                const maskPath = new Path2D();
-                const maxI = Math.floor(currentLength / step);
-                for (let i = 0; i <= maxI; i++) {
-                    const pt = pathPoints[i];
-                    if (i === 0) maskPath.moveTo(pt.x, pt.y);
-                    else maskPath.lineTo(pt.x, pt.y);
-                }
-                const currentPt = pathRef.current.getPointAtLength(currentLength);
-                maskPath.lineTo(currentPt.x, currentPt.y);
-                
-                ctx.save();
-                ctx.translate(-minX, -minY);
-                ctx.lineCap = 'round';
-                ctx.lineJoin = 'round';
-                // Reduced lineWidth to 40 to create a crisper, tighter mask around the true line shape
-                ctx.lineWidth = 40; 
-                ctx.strokeStyle = '#000'; // Color doesn't matter for mask shape
-                ctx.stroke(maskPath);
-                ctx.restore();
-                
-                // 3. Composite the solid text into the mask
-                ctx.globalCompositeOperation = 'source-in';
-                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                
-                // 4. Draw Background behind everything
-                ctx.globalCompositeOperation = 'destination-over';
-                ctx.fillStyle = bgColor;
-                ctx.fillRect(0, 0, canvas.width, canvas.height);
-                
-                // 5. Draw Pencil on top
-                ctx.globalCompositeOperation = 'source-over';
-                if (showPencil && progress < 1.0) {
+            // 2. Stroke the path sequentially
+            const currentLength = totalLength * progress;
+            const strokePath = new Path2D();
+            const maxI = Math.floor(currentLength / step);
+            
+            // Prevent out-of-bounds
+            const safeMaxI = Math.min(maxI, pathPoints.length - 1);
+            
+            for (let i = 0; i <= safeMaxI; i++) {
+                const pt = pathPoints[i];
+                if (!pt) continue;
+                // Since our custom parser creates disconnected shapes using M and L,
+                // we should strictly follow the SVG commands instead of blindly linking points.
+                // However, `getPointAtLength` linearly interpolates across M commands (creating jumps).
+                // Actually, Hershey paths have many jumps. 
+                // Wait! If getPointAtLength traverses M jumps, it draws straight lines between letters!
+            }
+            
+            // Better approach for Hershey paths with jumps:
+            // Parse the SVG `d` directly into sub-paths, and only draw up to `currentLength`.
+            // But we already have `pathRef.current` and `pathPoints`. Does `getPointAtLength` include M jumps?
+            // Yes, it does. This means we shouldn't use `pathPoints` naively for drawing if we want to avoid jump lines.
+            // Let's use `pathRef.current` combined with SVG `<path>` stroke-dasharray animation in Canvas? No, Canvas doesn't support that directly easily.
+            // Wait, we CAN use `ctx.setLineDash([currentLength, totalLength])` on the FULL path!
+            
+            const fullPath = new Path2D(pathData);
+            
+            ctx.save();
+            ctx.translate(-minX, -minY);
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+            ctx.lineWidth = 4; // Pen thickness
+            ctx.strokeStyle = textColor;
+            
+            // Use setLineDash to draw progressively without manually calculating jumps!
+            ctx.setLineDash([currentLength, totalLength]);
+            ctx.stroke(fullPath);
+            ctx.restore();
+            
+            // 3. Draw Pencil on top
+            if (showPencil && progress < 1.0) {
+                try {
+                    const currentPt = pathRef.current.getPointAtLength(currentLength);
                     ctx.save();
                     ctx.translate(-minX, -minY);
-                    ctx.font = '64px Arial';
-                    ctx.fillText('✏️', currentPt.x - 10, currentPt.y + 10);
+                    ctx.font = '32px Arial';
+                    ctx.fillText('✏️', currentPt.x - 5, currentPt.y + 5);
                     ctx.restore();
-                }
-                
-                // Add a hold time at the end to ensure final frames are captured by the MediaRecorder
-                const holdDuration = 2000;
-                
-                if (elapsed >= duration) {
-                    // Force a tiny invisible pixel change to ensure captureStream emits frames during the hold
-                    ctx.globalCompositeOperation = 'source-over';
-                    ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.01})`;
-                    ctx.fillRect(0, 0, 1, 1);
-                }
-                
-                if (elapsed < duration + holdDuration) {
-                    requestAnimationFrame(drawFrame);
-                } else {
-                    recorder.stop();
-                }
-            };
+                } catch(e) {}
+            }
             
-            requestAnimationFrame(drawFrame);
+            // Add a hold time at the end to ensure final frames are captured
+            const holdDuration = 2000;
+            
+            if (elapsed >= duration) {
+                // Force a tiny invisible pixel change to ensure captureStream emits frames
+                ctx.fillStyle = `rgba(0,0,0,${Math.random() * 0.01})`;
+                ctx.fillRect(0, 0, 1, 1);
+            }
+            
+            if (elapsed < duration + holdDuration) {
+                requestAnimationFrame(drawFrame);
+            } else {
+                recorder.stop();
+            }
         };
-        img.src = url;
+        
+        requestAnimationFrame(drawFrame);
     };
 
     return (
@@ -539,7 +429,7 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8 sm:mb-12">
                         <div>
                             <h2 className="text-3xl sm:text-5xl font-extrabold mb-2 text-gray-900 dark:text-white tracking-tight drop-shadow-sm transition-colors duration-500">Handwriting Generator</h2>
-                            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 font-light transition-colors duration-500">Type text to generate a beautifully animated handwriting video.</p>
+                            <p className="text-base sm:text-lg text-gray-600 dark:text-gray-400 font-light transition-colors duration-500">True single-stroke human handwriting simulation.</p>
                         </div>
                     </div>
 
@@ -560,15 +450,15 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
 
                             {/* Font Selection */}
                             <div className="flex flex-col gap-3 mb-8 group">
-                                <label className="text-xs tracking-wider uppercase font-semibold text-gray-500 dark:text-gray-400 transition-colors group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400">Font Style</label>
+                                <label className="text-xs tracking-wider uppercase font-semibold text-gray-500 dark:text-gray-400 transition-colors group-focus-within:text-indigo-500 dark:group-focus-within:text-indigo-400">Stroke Font Style</label>
                                 <div className="relative">
                                     <select 
-                                        value={selectedFontUrl} 
-                                        onChange={e => setSelectedFontUrl(e.target.value)}
+                                        value={selectedFont} 
+                                        onChange={e => setSelectedFont(e.target.value)}
                                         className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-black/20 focus:bg-white dark:focus:bg-black/40 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all outline-none appearance-none text-gray-900 dark:text-white font-medium text-lg shadow-inner cursor-pointer"
                                     >
-                                        {AVAILABLE_FONTS.map(f => (
-                                            <option key={f.name} value={f.url} className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">{f.name}</option>
+                                        {HERSHEY_FONTS.map(f => (
+                                            <option key={f.value} value={f.value} className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">{f.name}</option>
                                         ))}
                                     </select>
                                     <div className="absolute inset-y-0 right-0 flex items-center px-5 pointer-events-none text-gray-400">
@@ -648,7 +538,7 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                             <div className="flex flex-col sm:flex-row flex-wrap gap-5 items-start w-full">
                                 <button
                                     onClick={generateVideo}
-                                    disabled={isGenerating || !font || !text}
+                                    disabled={isGenerating || !text}
                                     className="w-full sm:w-auto relative group overflow-hidden bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 text-white px-10 py-4 rounded-2xl disabled:opacity-50 font-bold text-lg transition-all shadow-[0_0_20px_rgba(99,102,241,0.3)] dark:shadow-[0_0_20px_rgba(99,102,241,0.4)] hover:shadow-[0_0_30px_rgba(99,102,241,0.5)] dark:hover:shadow-[0_0_30px_rgba(99,102,241,0.6)] active:scale-95 flex items-center justify-center gap-3 border border-white/20"
                                 >
                                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:animate-shimmer"></div>
@@ -680,6 +570,14 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                                         Download .{videoUrl.ext}
                                     </a>
                                 )}
+
+                                <button
+                                    onClick={handleDownloadLottie}
+                                    className="w-full sm:w-auto bg-white/60 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 backdrop-blur-md text-gray-900 dark:text-white px-8 py-4 rounded-2xl font-bold text-lg transition-all shadow-lg hover:shadow-xl flex items-center justify-center gap-3 border border-gray-200 dark:border-white/20"
+                                >
+                                    <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 19l3 3m0 0l3-3m-3 3V10"></path></svg>
+                                    Export Lottie JSON
+                                </button>
                             </div>
                         </div>
 
@@ -697,51 +595,33 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                                 
                                 <div className="absolute top-5 left-5 text-[10px] font-bold text-gray-800/50 dark:text-white/50 uppercase tracking-[0.2em] mix-blend-normal dark:mix-blend-screen backdrop-blur-md bg-white/50 dark:bg-black/20 px-3 py-1.5 rounded-lg border border-gray-200 dark:border-white/10">Live Preview</div>
 
-                                {!font && fontLoadingProgress === null && !fontError && (
-                                    <button
-                                        onClick={loadPreview}
-                                        className="bg-white/60 dark:bg-white/10 hover:bg-white dark:hover:bg-white/20 text-gray-900 dark:text-white backdrop-blur-md px-8 py-4 rounded-xl font-medium transition-all shadow-xl relative z-10 border border-gray-200 dark:border-white/20"
-                                    >
-                                        Load Preview
-                                    </button>
-                                )}
-
-                                {fontLoadingProgress !== null && (
-                                    <div className="flex flex-col items-center justify-center w-full max-w-xs relative z-10 bg-white/60 dark:bg-black/40 backdrop-blur-md p-6 rounded-2xl border border-gray-200 dark:border-white/10 shadow-xl">
-                                        <div className="text-sm font-semibold text-gray-800 dark:text-white/80 mb-3">Loading Font... {fontLoadingProgress}%</div>
-                                        <div className="w-full bg-gray-200 dark:bg-white/10 rounded-full h-2 shadow-inner">
-                                            <div className="bg-indigo-500 h-2 rounded-full transition-all duration-300 shadow-[0_0_10px_rgba(99,102,241,0.5)] dark:shadow-[0_0_10px_rgba(99,102,241,0.8)]" style={{ width: `${fontLoadingProgress}%` }}></div>
-                                        </div>
-                                    </div>
-                                )}
-
-                                {font && fontLoadingProgress === null && (
+                                {text && (
                                     <div className="w-full flex flex-col items-center relative z-10 transition-transform duration-500 group-hover:scale-105">
                                         <svg key={text} ref={svgRef} width={svgDimensions.width} height={svgDimensions.height} viewBox={svgDimensions.viewBox} className="max-w-full h-auto drop-shadow-2xl" style={{ overflow: 'visible' }}>
+                                            {/* Preview animation uses stroke-dasharray and CSS animation for smooth writing effect */}
+                                            <style>
+                                                {`
+                                                    @keyframes drawLine {
+                                                        from { stroke-dashoffset: ${totalLength}; }
+                                                        to { stroke-dashoffset: 0; }
+                                                    }
+                                                `}
+                                            </style>
                                             <path 
                                                 ref={pathRef}
                                                 d={pathData} 
-                                                fill={textColor} 
+                                                fill="none"
                                                 stroke={textColor} 
-                                                strokeWidth="1" 
+                                                strokeWidth="3"
+                                                strokeLinecap="round"
+                                                strokeLinejoin="round"
+                                                style={{
+                                                    strokeDasharray: totalLength,
+                                                    strokeDashoffset: totalLength,
+                                                    animation: `drawLine ${Math.max(2.5, text.length * 0.2) / speed}s ease-in-out forwards`
+                                                }}
                                             />
                                         </svg>
-                                    </div>
-                                )}
-
-                                {fontError && (
-                                    <div className="flex flex-col items-center justify-center bg-red-50 dark:bg-red-500/20 backdrop-blur-md border border-red-200 dark:border-red-500/30 p-8 rounded-2xl text-center relative z-10 shadow-xl">
-                                        <svg xmlns="http://www.w3.org/2000/svg" className="h-12 w-12 mb-4 text-red-500 dark:text-red-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                        </svg>
-                                        <span className="font-bold text-gray-900 dark:text-white text-lg">Failed to load font</span>
-                                        <span className="text-sm mt-2 text-red-600 dark:text-red-200">{fontError}</span>
-                                        <button
-                                            onClick={loadPreview}
-                                            className="mt-6 bg-red-600 hover:bg-red-700 dark:bg-red-500 dark:hover:bg-red-600 text-white px-6 py-2.5 rounded-xl font-bold transition-all shadow-lg"
-                                        >
-                                            Retry
-                                        </button>
                                     </div>
                                 )}
                             </div>
@@ -750,17 +630,24 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                                 <div className="animate-in fade-in slide-in-from-bottom-8 duration-700 bg-white/60 dark:bg-white/5 backdrop-blur-xl border border-gray-200 dark:border-white/10 p-6 rounded-3xl shadow-2xl relative overflow-hidden transition-colors duration-500">
                                     <div className="absolute inset-0 bg-gradient-to-br from-indigo-500/10 to-pink-500/10 pointer-events-none"></div>
                                     <h3 className="text-xs font-bold mb-4 text-gray-500 dark:text-white/50 uppercase tracking-widest relative z-10">Final Render ({videoUrl.ext.toUpperCase()})</h3>
-                                    <div className="bg-gray-100 dark:bg-black/40 border border-gray-200 dark:border-white/5 p-2 rounded-2xl shadow-inner flex items-center justify-center relative z-10 transition-colors duration-500">
-                                        <video src={videoUrl.url} autoPlay loop muted className="w-full rounded-xl drop-shadow-2xl" />
+                                    <div className="bg-gray-100 dark:bg-black/40 border border-gray-200 dark:border-white/5 p-2 rounded-2xl shadow-inner relative z-10">
+                                        <video 
+                                            src={videoUrl.url} 
+                                            controls 
+                                            className="w-full rounded-xl"
+                                            autoPlay
+                                            loop
+                                        />
                                     </div>
                                 </div>
                             )}
                         </div>
                     </div>
-
-                    <canvas ref={canvasRef} style={{ display: 'none' }} />
                 </div>
             </div>
+
+            {/* Hidden canvas for video generation */}
+            <canvas ref={canvasRef} className="hidden" />
         </div>
     );
 }
