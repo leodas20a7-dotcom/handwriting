@@ -145,12 +145,12 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
 
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         for (const cmd of p.commands) {
-            if (cmd.x !== undefined) { minX = Math.min(minX, cmd.x); maxX = Math.max(maxX, cmd.x); }
-            if (cmd.y !== undefined) { minY = Math.min(minY, cmd.y); maxY = Math.max(maxY, cmd.y); }
-            if (cmd.x1 !== undefined) { minX = Math.min(minX, cmd.x1); maxX = Math.max(maxX, cmd.x1); }
-            if (cmd.y1 !== undefined) { minY = Math.min(minY, cmd.y1); maxY = Math.max(maxY, cmd.y1); }
-            if (cmd.x2 !== undefined) { minX = Math.min(minX, cmd.x2); maxX = Math.max(maxX, cmd.x2); }
-            if (cmd.y2 !== undefined) { minY = Math.min(minY, cmd.y2); maxY = Math.max(maxY, cmd.y2); }
+            if (cmd.x !== undefined && !isNaN(cmd.x)) { minX = Math.min(minX, cmd.x); maxX = Math.max(maxX, cmd.x); }
+            if (cmd.y !== undefined && !isNaN(cmd.y)) { minY = Math.min(minY, cmd.y); maxY = Math.max(maxY, cmd.y); }
+            if (cmd.x1 !== undefined && !isNaN(cmd.x1)) { minX = Math.min(minX, cmd.x1); maxX = Math.max(maxX, cmd.x1); }
+            if (cmd.y1 !== undefined && !isNaN(cmd.y1)) { minY = Math.min(minY, cmd.y1); maxY = Math.max(maxY, cmd.y1); }
+            if (cmd.x2 !== undefined && !isNaN(cmd.x2)) { minX = Math.min(minX, cmd.x2); maxX = Math.max(maxX, cmd.x2); }
+            if (cmd.y2 !== undefined && !isNaN(cmd.y2)) { minY = Math.min(minY, cmd.y2); maxY = Math.max(maxY, cmd.y2); }
         }
         if (minX === Infinity) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
 
@@ -172,12 +172,12 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
         
         let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
         for (const cmd of p.commands) {
-            if (cmd.x !== undefined) { minX = Math.min(minX, cmd.x); maxX = Math.max(maxX, cmd.x); }
-            if (cmd.y !== undefined) { minY = Math.min(minY, cmd.y); maxY = Math.max(maxY, cmd.y); }
-            if (cmd.x1 !== undefined) { minX = Math.min(minX, cmd.x1); maxX = Math.max(maxX, cmd.x1); }
-            if (cmd.y1 !== undefined) { minY = Math.min(minY, cmd.y1); maxY = Math.max(maxY, cmd.y1); }
-            if (cmd.x2 !== undefined) { minX = Math.min(minX, cmd.x2); maxX = Math.max(maxX, cmd.x2); }
-            if (cmd.y2 !== undefined) { minY = Math.min(minY, cmd.y2); maxY = Math.max(maxY, cmd.y2); }
+            if (cmd.x !== undefined && !isNaN(cmd.x)) { minX = Math.min(minX, cmd.x); maxX = Math.max(maxX, cmd.x); }
+            if (cmd.y !== undefined && !isNaN(cmd.y)) { minY = Math.min(minY, cmd.y); maxY = Math.max(maxY, cmd.y); }
+            if (cmd.x1 !== undefined && !isNaN(cmd.x1)) { minX = Math.min(minX, cmd.x1); maxX = Math.max(maxX, cmd.x1); }
+            if (cmd.y1 !== undefined && !isNaN(cmd.y1)) { minY = Math.min(minY, cmd.y1); maxY = Math.max(maxY, cmd.y1); }
+            if (cmd.x2 !== undefined && !isNaN(cmd.x2)) { minX = Math.min(minX, cmd.x2); maxX = Math.max(maxX, cmd.x2); }
+            if (cmd.y2 !== undefined && !isNaN(cmd.y2)) { minY = Math.min(minY, cmd.y2); maxY = Math.max(maxY, cmd.y2); }
         }
         if (minX === Infinity) { minX = 0; minY = 0; maxX = 100; maxY = 100; }
 
