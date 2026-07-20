@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
 import opentype from 'opentype.js';
-import Lottie from 'lottie-react';
+import { DotLottieReact } from '@lottiefiles/dotlottie-react';
 import pacificoUrl from '../assets/Pacifico-Regular.ttf';
 import dancingScriptUrl from '@fontsource/dancing-script/files/dancing-script-latin-400-normal.woff?url';
 import caveatUrl from '@fontsource/caveat/files/caveat-latin-400-normal.woff?url';
@@ -37,14 +37,6 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
     const [showPencil, setShowPencil] = useState(false);
     const [speed, setSpeed] = useState(1);
     const [retryCount, setRetryCount] = useState(0);
-    const [lottieAnimation, setLottieAnimation] = useState(null);
-
-    useEffect(() => {
-        fetch('https://lottie.host/1046ae5b-2e59-47ce-bb6a-d5f7aaa2dddd/4m7zJ5OgRA.json')
-            .then(res => res.json())
-            .then(data => setLottieAnimation(data))
-            .catch(err => console.error("Error loading Lottie", err));
-    }, []);
 
     const getContrastColor = (hex) => {
         if (!hex) return '#ffffff';
@@ -283,6 +275,18 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
 
     return (
         <div className="p-0 sm:p-4 md:p-8 max-w-7xl mx-auto w-full relative z-10">
+            {/* Full Screen Loading Overlay for Video Generation */}
+            <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-white/80 dark:bg-black/80 backdrop-blur-xl transition-all duration-500 ${isGenerating ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+                <div className="relative w-32 h-32 mb-8 drop-shadow-2xl">
+                    <div className="absolute inset-0 rounded-full border-t-4 border-indigo-500 animate-spin"></div>
+                    <div className="absolute inset-2 rounded-full border-r-4 border-purple-500 animate-[spin_1.5s_linear_infinite_reverse]"></div>
+                    <div className="absolute inset-4 rounded-full border-b-4 border-pink-500 animate-[spin_2s_linear_infinite]"></div>
+                    <div className="absolute inset-0 flex items-center justify-center text-4xl animate-bounce">✏️</div>
+                </div>
+                <h3 className="text-3xl sm:text-4xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 mb-3 tracking-wide animate-pulse">Crafting Your Video...</h3>
+                <p className="text-gray-600 dark:text-gray-300 font-light text-lg sm:text-xl">Drawing every single frame with precision</p>
+            </div>
+
             {/* Theme Toggle Button */}
             <button 
                 onClick={() => setIsDark(!isDark)}
@@ -297,14 +301,12 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
 
                 <div className="relative z-10 flex-grow flex flex-col justify-center py-4 sm:py-0">
                     <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4 mb-8 sm:mb-12">
-                        <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 drop-shadow-lg">
-                            {lottieAnimation && (
-                                <Lottie 
-                                    animationData={lottieAnimation} 
-                                    loop={true} 
-                                    autoplay={true} 
-                                />
-                            )}
+                        <div className="w-24 h-24 sm:w-32 sm:h-32 flex-shrink-0 drop-shadow-lg relative">
+                            <DotLottieReact 
+                                src="https://lottie.host/1046ae5b-2e59-47ce-bb6a-d5f7aaa2dddd/4m7zJ5OgRA.json" 
+                                loop 
+                                autoplay 
+                            />
                         </div>
                         <div>
                             <h2 className="text-3xl sm:text-5xl font-extrabold mb-2 text-gray-900 dark:text-white tracking-tight drop-shadow-sm transition-colors duration-500">Handwriting Generator</h2>

@@ -8,4 +8,14 @@ export default defineConfig({
     tailwindcss(),
     react()
   ],
+  build: {
+    chunkSizeWarningLimit: 1000,
+    rollupOptions: {
+      onwarn(warning, warn) {
+        // Suppress the lottie-web EVAL warning
+        if (warning.code === 'EVAL') return
+        warn(warning)
+      }
+    }
+  }
 })
