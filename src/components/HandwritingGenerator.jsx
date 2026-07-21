@@ -33,8 +33,8 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
     const [fontError, setFontError] = useState(null);
     const [fontLoadingProgress, setFontLoadingProgress] = useState(null);
     const [bgColor, setBgColor] = useState(PRESET_COLORS[0].value); 
-    const [showPencil, setShowPencil] = useState(false);
-    const [speed, setSpeed] = useState(1);
+    const [showPencil, setShowPencil] = useState(true);
+    const [speed, setSpeed] = useState(0.5);
     const [retryCount, setRetryCount] = useState(0);
 
     const loadingPhrases = [
@@ -447,7 +447,7 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
         recorder.start();
 
         // Prevent browser bugs where getPointAtLength(totalLength) returns (0,0) by slightly reducing the max length
-        const safeLength = totalLength * 0.999; 
+        const safeLength = Math.max(0, totalLength - 1); 
         
         // Pre-calculate path points for performance to avoid calling getPointAtLength thousands of times per frame
         const pathPoints = [];
@@ -487,16 +487,36 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                 ctx.clearRect(0, 0, canvas.width, canvas.height);
                 
                 // 2. Draw the growing "worm" mask tracing the path
-                const currentLength = totalLength * progress;
+                const currentLength = safeLength * progress;
                 const maskPath = new Path2D();
                 const maxI = Math.floor(currentLength / step);
+                let prevPt = null;
+                
                 for (let i = 0; i <= maxI; i++) {
                     const pt = pathPoints[i];
-                    if (i === 0) maskPath.moveTo(pt.x, pt.y);
-                    else maskPath.lineTo(pt.x, pt.y);
+                    if (!pt) continue;
+                    
+                    if (!prevPt) {
+                        maskPath.moveTo(pt.x, pt.y);
+                    } else {
+                        const dist = Math.hypot(pt.x - prevPt.x, pt.y - prevPt.y);
+                        // If distance between samples is much larger than the step, it's a pen lift (MoveTo)
+                        if (dist > step * 2) maskPath.moveTo(pt.x, pt.y);
+                        else maskPath.lineTo(pt.x, pt.y);
+                    }
+                    prevPt = pt;
                 }
+                
                 const currentPt = pathRef.current.getPointAtLength(currentLength);
-                maskPath.lineTo(currentPt.x, currentPt.y);
+                if (currentPt) {
+                    if (!prevPt) {
+                        maskPath.moveTo(currentPt.x, currentPt.y);
+                    } else {
+                        const dist = Math.hypot(currentPt.x - prevPt.x, currentPt.y - prevPt.y);
+                        if (dist > step * 2) maskPath.moveTo(currentPt.x, currentPt.y);
+                        else maskPath.lineTo(currentPt.x, currentPt.y);
+                    }
+                }
                 
                 ctx.save();
                 ctx.translate(-minX, -minY);
@@ -531,12 +551,13 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                 const holdDuration = 3000;
                 
                 if (elapsed >= duration) {
-                    // Force a visible change (alternating tiny corner pixels) to ensure captureStream emits frames
+                    // Force a full-frame subtle change to ensure the video encoder doesn't drop the final frames.
+                    // This prevents the "last 2 letters missing" bug caused by MediaRecorder truncating static video streams.
                     ctx.globalCompositeOperation = 'source-over';
-                    ctx.fillStyle = (Math.floor(elapsed / 100) % 2 === 0) ? '#000' : '#fff';
-                    ctx.globalAlpha = 0.05;
-                    ctx.fillRect(0, 0, 2, 2);
-                    ctx.globalAlpha = 1.0;
+                    ctx.fillStyle = 'rgba(128,128,128,0.02)';
+                    if (Math.floor(elapsed / 100) % 2 === 0) {
+                        ctx.fillRect(0, 0, canvas.width, canvas.height);
+                    }
                 }
                 
                 if (elapsed < duration + holdDuration) {
@@ -633,8 +654,6 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                                         onChange={e => setSpeed(Number(e.target.value))}
                                         className="w-full px-5 py-4 rounded-2xl border border-gray-200 dark:border-white/10 bg-white/80 dark:bg-black/20 focus:bg-white dark:focus:bg-black/40 focus:border-indigo-500 focus:ring-4 focus:ring-indigo-500/20 transition-all outline-none appearance-none text-gray-900 dark:text-white font-medium text-lg shadow-inner cursor-pointer"
                                     >
-                                        <option value="0.1" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">0.1x (Ultra Slow)</option>
-                                        <option value="0.25" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">0.25x (Super Slow)</option>
                                         <option value="0.5" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">0.5x (Very Slow)</option>
                                         <option value="1" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">1x (Normal)</option>
                                         <option value="1.5" className="bg-white dark:bg-gray-900 text-gray-900 dark:text-white">1.5x (Fast)</option>
