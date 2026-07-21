@@ -539,33 +539,32 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                 
                 // 5. Draw Pencil on top
                 ctx.globalCompositeOperation = 'source-over';
-                if (showPencil && progress < 1.0) {
-                    ctx.save();
-                    ctx.translate(-minX, -minY);
-                    ctx.font = '64px Arial';
-                    ctx.fillText('✏️', currentPt.x - 10, currentPt.y + 10);
-                    ctx.restore();
+                if (showPencil) {
+                    if (progress < 1.0) {
+                        ctx.save();
+                        ctx.translate(-minX, -minY);
+                        ctx.font = '64px Arial';
+                        ctx.fillText('✏️', currentPt.x - 10, currentPt.y + 10);
+                        ctx.restore();
+                    } else if (elapsed < duration + 2000) {
+                        // Fade out the pencil over 2 seconds to ensure the encoder stays active and captures final frames!
+                        const fade = 1.0 - ((elapsed - duration) / 2000);
+                        ctx.save();
+                        ctx.translate(-minX, -minY);
+                        ctx.globalAlpha = Math.max(0, fade);
+                        ctx.font = '64px Arial';
+                        ctx.fillText('✏️', currentPt.x - 10, currentPt.y + 10);
+                        ctx.restore();
+                    }
                 }
                 
                 // Add a hold time at the end to ensure final frames are captured by the MediaRecorder
                 const holdDuration = 3000;
                 
-                if (elapsed >= duration) {
-                    // Force a full-frame subtle change to ensure the video encoder doesn't drop the final frames.
-                    // This prevents the "last 2 letters missing" bug caused by MediaRecorder truncating static video streams.
-                    ctx.globalCompositeOperation = 'source-over';
-                    ctx.fillStyle = 'rgba(128,128,128,0.02)';
-                    if (Math.floor(elapsed / 100) % 2 === 0) {
-                        ctx.fillRect(0, 0, canvas.width, canvas.height);
-                    }
-                }
-                
                 if (elapsed < duration + holdDuration) {
                     requestAnimationFrame(drawFrame);
                 } else {
-                    try {
-                        recorder.requestData();
-                    } catch(e) {}
+                    // Stop recorder smoothly without requestData() race conditions
                     recorder.stop();
                 }
             };
