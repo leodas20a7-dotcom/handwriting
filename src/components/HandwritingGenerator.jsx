@@ -5,6 +5,7 @@ import dancingScriptUrl from '@fontsource/dancing-script/files/dancing-script-la
 import caveatUrl from '@fontsource/caveat/files/caveat-latin-400-normal.woff?url';
 import satisfyUrl from '@fontsource/satisfy/files/satisfy-latin-400-normal.woff?url';
 import sacramentoUrl from '@fontsource/sacramento/files/sacramento-latin-400-normal.woff?url';
+import verandahReverieUrl from '../assets/fonts/VerandahReverie_PERSONAL_USE_ONLY.otf';
 
 const AVAILABLE_FONTS = [
     { name: 'Pacifico', url: pacificoUrl },
@@ -12,6 +13,7 @@ const AVAILABLE_FONTS = [
     { name: 'Caveat', url: caveatUrl },
     { name: 'Satisfy', url: satisfyUrl },
     { name: 'Sacramento', url: sacramentoUrl },
+    { name: 'Verandah Reverie', url: verandahReverieUrl },
 ];
 
 const PRESET_COLORS = [
@@ -523,7 +525,7 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
                 // Use a tighter brush to prevent revealing adjacent letters prematurely, creating a much better handwriting illusion
-                ctx.lineWidth = 25; 
+                ctx.lineWidth = 8; 
                 ctx.strokeStyle = '#000'; // Color doesn't matter for mask shape
                 ctx.stroke(maskPath);
                 ctx.restore();
