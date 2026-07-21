@@ -29,11 +29,11 @@ export default function HandwritingGenerator({ isDark, setIsDark }) {
     const [isGenerating, setIsGenerating] = useState(false);
     const [videoUrl, setVideoUrl] = useState(null);
     const [font, setFont] = useState(null);
-    const [selectedFontUrl, setSelectedFontUrl] = useState(AVAILABLE_FONTS[0].url);
+    const [selectedFontUrl, setSelectedFontUrl] = useState(AVAILABLE_FONTS[4].url);
     const [fontError, setFontError] = useState(null);
     const [fontLoadingProgress, setFontLoadingProgress] = useState(null);
     const [bgColor, setBgColor] = useState(PRESET_COLORS[0].value); 
-    const [showPencil, setShowPencil] = useState(true);
+    const [showPencil, setShowPencil] = useState(false);
     const [speed, setSpeed] = useState(0.5);
     const [retryCount, setRetryCount] = useState(0);
 
